@@ -57,7 +57,20 @@
   #estado { margin: 1rem 0 .4rem; color: var(--muted); min-height: 1.4em; }
   progress { width: 100%; height: .5rem; accent-color: var(--accent); }
   #salida { display: none; margin-top: 1.2rem; }
-  video { width: 100%; border-radius: 12px; background: #000; max-height: 60vh; }
+  [hidden] { display: none !important; }
+  .visor { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; }
+  video { display: block; width: auto; max-width: 100%; max-height: 60vh; border-radius: 12px; background: #000; }
+  .sub { position: absolute; left: 50%; transform: translate(-50%, -50%); width: max-content; max-width: 92%;
+         padding: .1em .4em; text-align: center; font-weight: 700; line-height: 1.2; pointer-events: none;
+         font-family: -apple-system, Helvetica, Arial, sans-serif; }
+  .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem .9rem; margin-top: .9rem; font-size: .78rem; color: var(--muted); }
+  .ctl label { display: flex; flex-direction: column; gap: .3rem; }
+  .ctl input[type=range] { width: 100%; accent-color: var(--accent); }
+  .ctl input[type=color] { width: 100%; height: 2.2rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 2px; }
+  .ctl .chk { flex-direction: row; align-items: center; gap: .5rem; }
+  .prim { width: 100%; font: inherit; font-weight: 700; border: 0; border-radius: 10px; padding: .9rem; margin-top: .9rem;
+          background: var(--accent); color: #07101a; cursor: pointer; }
+  .prim:disabled { background: var(--off); color: var(--off-ink); cursor: default; }
   .botones { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin: .9rem 0; }
   .botones button { font: inherit; font-weight: 600; color: var(--ink); background: transparent;
                     border: 1px solid var(--line); border-radius: 10px; padding: .75rem .5rem; cursor: pointer; }
@@ -124,7 +137,19 @@
 
   <section id="salida" class="card">
     <div class="cab"><span class="n">03</span><h2>Preview</h2></div>
-    <video id="reproductor" controls playsinline></video>
+    <div class="visor">
+      <video id="reproductor" controls playsinline></video>
+      <div id="sub" class="sub" hidden></div>
+    </div>
+    <p class="nota" style="margin-top:.9rem">Subtitle style</p>
+    <div class="ctl">
+      <label>Size <input id="tam" type="range" min="3" max="12" step="0.5" value="6"></label>
+      <label>Position (top to bottom) <input id="pos" type="range" min="8" max="94" value="86"></label>
+      <label>Color <input id="color" type="color" value="#ffffff"></label>
+      <label class="chk"><input id="fondo" type="checkbox" checked> Dark background</label>
+    </div>
+    <button id="grabar" class="prim">Download video with subtitles</button>
+    <button id="guardar" class="prim" hidden>Save video</button>
     <div class="botones">
       <button id="srt">Download subtitles (.srt)</button>
       <button id="copiar">Copy text</button>
@@ -199,13 +224,7 @@
     urlVideo = URL.createObjectURL(archivo);
     const rep = $("reproductor");
     rep.innerHTML = ""; rep.src = urlVideo;
-    const vtt = "WEBVTT\n\n" + segmentos.map((s) =>
-      tiempo(s.ini, ".") + " --> " + tiempo(s.fin, ".") + "\n" + texto(s) + "\n").join("\n");
-    const pista = document.createElement("track");
-    pista.kind = "subtitles"; pista.label = "Subtitles"; pista.default = true;
-    pista.src = URL.createObjectURL(new Blob([vtt], { type: "text/vtt" }));
-    rep.appendChild(pista);
-    pista.addEventListener("load", () => { pista.track.mode = "showing"; });
+    $("guardar").hidden = true;
 
     const lista = $("lista");
     lista.innerHTML = "";
@@ -303,6 +322,120 @@
     try { await navigator.clipboard.writeText(segmentos.map(texto).join("\n")); b.textContent = "Copied"; }
     catch { b.textContent = "Couldn't copy"; }
     setTimeout(() => (b.textContent = "Copy text"), 1500);
+  });
+  // ---- Subtitle style, live overlay and video export ----
+  const rep = $("reproductor"), capa = $("sub");
+  const estilo = () => ({ tam: +$("tam").value / 100, pos: +$("pos").value / 100,
+                          color: $("color").value, fondo: $("fondo").checked });
+  const textoEn = (t) => { const s = segmentos.find((x) => t >= x.ini && t < x.fin); return s ? texto(s) : ""; };
+
+  function actualizarSub() {
+    if (!rep.clientHeight) return;
+    const e = estilo(), t = textoEn(rep.currentTime);
+    capa.hidden = !t;
+    capa.textContent = t;
+    capa.style.fontSize = e.tam * rep.clientHeight + "px";
+    capa.style.top = e.pos * 100 + "%";
+    capa.style.color = e.color;
+    capa.style.background = e.fondo ? "rgba(0,0,0,.6)" : "transparent";
+    capa.style.textShadow = e.fondo ? "none" : "0 0 4px #000, 0 0 4px #000, 0 0 2px #000";
+  }
+  (function bucle() { actualizarSub(); requestAnimationFrame(bucle); })();
+
+  function envolver(c, txt, maxAncho) {
+    const lineas = []; let l = "";
+    for (const p of txt.split(/\s+/)) {
+      const prueba = l ? l + " " + p : p;
+      if (c.measureText(prueba).width > maxAncho && l) { lineas.push(l); l = p; } else l = prueba;
+    }
+    if (l) lineas.push(l);
+    return lineas;
+  }
+
+  function dibujarSub(c, W, H, txt, e) {
+    if (!txt) return;
+    const px = e.tam * H;
+    c.font = "700 " + px + "px -apple-system, Helvetica, Arial, sans-serif";
+    c.textAlign = "center"; c.textBaseline = "middle";
+    const lineas = envolver(c, txt, W * 0.92 - px * 0.8);
+    const alto = px * 1.2, total = alto * lineas.length, cy = e.pos * H;
+    if (e.fondo) {
+      const ancho = Math.max(...lineas.map((l) => c.measureText(l).width)) + px * 0.8;
+      c.fillStyle = "rgba(0,0,0,.6)";
+      c.fillRect(W / 2 - ancho / 2, cy - total / 2 - px * 0.15, ancho, total + px * 0.3);
+    }
+    lineas.forEach((l, i) => {
+      const y = cy - total / 2 + alto * (i + 0.5);
+      if (!e.fondo) { c.lineWidth = px * 0.18; c.lineJoin = "round"; c.strokeStyle = "#000"; c.strokeText(l, W / 2, y); }
+      c.fillStyle = e.color; c.fillText(l, W / 2, y);
+    });
+  }
+
+  let listo = null;
+
+  $("grabar").addEventListener("click", () => {
+    if (!window.MediaRecorder || !segmentos.length) {
+      estado.textContent = "This browser can't record video. Update Safari and try again."; return;
+    }
+    const btn = $("grabar"); btn.disabled = true; $("guardar").hidden = true; listo = null;
+    rep.pause();
+    const e = estilo();
+    const esc = Math.min(1, 1280 / Math.max(rep.videoWidth, rep.videoHeight));
+    const W = Math.round(rep.videoWidth * esc), H = Math.round(rep.videoHeight * esc);
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const c = cv.getContext("2d");
+
+    // Hidden copy of the video: its sound goes to the recorder only, so nothing plays out loud.
+    const v = document.createElement("video");
+    v.src = urlVideo; v.playsInline = true; v.setAttribute("playsinline", "");
+    v.style.cssText = "position:fixed;left:0;top:0;width:320px;opacity:0;pointer-events:none;z-index:-1";
+    document.body.appendChild(v);
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ac = new AC(); ac.resume();
+    const dest = ac.createMediaStreamDestination();
+    ac.createMediaElementSource(v).connect(dest);
+
+    const flujo = cv.captureStream(30);
+    dest.stream.getAudioTracks().forEach((t) => flujo.addTrack(t));
+    const tipo = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"]
+      .find((t) => MediaRecorder.isTypeSupported(t)) || "";
+    const grab = new MediaRecorder(flujo, tipo ? { mimeType: tipo, videoBitsPerSecond: 4000000 } : {});
+    const trozos = [];
+    grab.ondataavailable = (ev) => { if (ev.data.size) trozos.push(ev.data); };
+
+    const terminar = (error) => {
+      v.remove(); ac.close(); barra.hidden = true; btn.disabled = false;
+      if (error) { estado.textContent = "Something went wrong: " + error; return; }
+      const ext = (grab.mimeType || tipo).includes("mp4") ? "mp4" : "webm";
+      listo = new File(trozos, "video-with-subtitles." + ext, { type: "video/" + ext });
+      $("guardar").hidden = false;
+      estado.textContent = "Your video is ready. Tap Save video.";
+    };
+    grab.onstop = () => terminar(null);
+    v.onerror = () => { if (grab.state !== "inactive") grab.stop(); terminar("couldn't read the video"); };
+    v.onended = () => { if (grab.state !== "inactive") grab.stop(); };
+
+    barra.hidden = false; barra.value = 0;
+    estado.textContent = "Recording the video with subtitles in real time. Keep this screen open.";
+    grab.start(1000);
+    v.play().catch((err) => { if (grab.state !== "inactive") grab.stop(); terminar(err.message); });
+
+    const pintar = () => {
+      c.drawImage(v, 0, 0, W, H);
+      dibujarSub(c, W, H, textoEn(v.currentTime), e);
+      barra.value = v.duration ? Math.round((v.currentTime / v.duration) * 100) : 0;
+      if (!v.ended && grab.state !== "inactive") requestAnimationFrame(pintar);
+    };
+    pintar();
+  });
+
+  $("guardar").addEventListener("click", async () => {
+    if (!listo) return;
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [listo] })) { await navigator.share({ files: [listo] }); return; }
+    } catch (err) { if (err.name === "AbortError") return; }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(listo); a.download = listo.name; a.click();
   });
 </script>
 </body>
