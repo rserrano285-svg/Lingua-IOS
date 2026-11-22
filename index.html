@@ -79,6 +79,11 @@
   .mm { width: 2.4rem; height: 2.4rem; flex: none; border-radius: 10px; border: 1px solid var(--line);
         background: var(--bg); color: var(--ink); font-size: 1.3rem; line-height: 1; padding: 0; cursor: pointer; }
   .botones .prim { margin-top: 0; }
+  #zonaMsg { margin-top: .9rem; }
+  #zonaMsg #estado { color: var(--ink); background: var(--bg); border: 1px solid var(--accent); border-radius: 10px;
+                     padding: .7rem .8rem; min-height: 0; margin: 0 0 .6rem; }
+  #zonaMsg #estado:empty { display: none; }
+  #abrirFiles { display: inline-block; margin: .2rem 0 .8rem; color: var(--accent); }
   .sws input[type=text] { width: 6.2rem; }
   .prim { width: 100%; font: inherit; font-weight: 700; border: 0; border-radius: 10px; padding: .9rem; margin-top: .9rem;
           background: var(--accent); color: #07101a; cursor: pointer; }
@@ -146,8 +151,10 @@
     <button id="ir" disabled><span>Translate video</span><span aria-hidden="true">↗</span></button>
   </section>
 
-  <div id="estado" role="status"></div>
-  <progress id="barra" value="0" max="100" hidden></progress>
+  <div id="zonaTop">
+    <div id="estado" role="status"></div>
+    <progress id="barra" value="0" max="100" hidden></progress>
+  </div>
 
   <section id="salida" class="card">
     <div class="cab"><span class="n">03</span><h2>Preview</h2></div>
@@ -195,10 +202,12 @@
     <button id="grabar" class="prim">Step 1: Create video with subtitles</button>
     <video id="final" controls playsinline hidden style="margin-top:.9rem;width:100%;border-radius:12px;background:#000"></video>
     <p class="nota" style="margin-top:.9rem">Step 2: choose where to save the finished video</p>
-    <div class="botones">
-      <button id="aFotos" class="prim" disabled>Save to Photos</button>
-      <button id="aArchivos" class="prim" disabled>Save to Files</button>
-    </div>
+    <button id="aElegir" class="prim" disabled>Choose where to save</button>
+    <p class="nota">Opens the iPhone menu. Tap <b>Save Video</b> to put it in Photos, or <b>Save to Files</b> to pick a folder.</p>
+    <button id="aArchivos" class="prim" disabled>Download to the Downloads folder</button>
+    <p class="nota">No questions asked. Safari saves it in the Files app, inside Downloads.</p>
+    <div id="zonaMsg"></div>
+    <a id="abrirFiles" href="shareddocuments://" hidden>Open the Files app</a>
     <div class="botones">
       <button id="srt">Download subtitles (.srt)</button>
       <button id="copiar">Copy text</button>
@@ -208,7 +217,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v8</span>
+  <span>Open source · Runs on your device · v9</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -294,6 +303,7 @@
       lista.appendChild(li);
     });
     $("salida").style.display = "block";
+    $("zonaMsg").append(estado, barra);
   }
 
   function archivoElegido() {
@@ -316,7 +326,7 @@
     if (!pipeline) { aviso("The engine did not load, so nothing can run. Reload the page with a good internet connection."); return; }
     const dest = $("destino").value;
     let orig = $("origen").value;
-    ir.disabled = true; $("salida").style.display = "none";
+    ir.disabled = true; $("salida").style.display = "none"; $("zonaTop").append(estado, barra);
     try {
       etiqueta = "Downloading the speech model (first time only)…";
       const asr = await pipeline("automatic-speech-recognition", $("modelo").value, { progress_callback: progreso });
@@ -470,14 +480,14 @@
       listo = new File(trozos, "video-with-subtitles." + ext, { type: "video/" + ext });
       activarGuardar(true);
       $("final").src = URL.createObjectURL(listo); $("final").hidden = false;
-      estado.textContent = "Your video is ready. Watch it above, then choose Save to Photos or Save to Files.";
+      hecho("Your video is ready. Watch it above, then choose below where to save it.");
     };
     grab.onstop = () => terminar(null);
     v.onerror = () => { if (grab.state !== "inactive") grab.stop(); terminar("couldn't read the video"); };
     v.onended = () => { if (grab.state !== "inactive") grab.stop(); };
 
     barra.hidden = false; barra.value = 0;
-    estado.textContent = "Recording the video with subtitles in real time. Keep this screen open.";
+    hecho("Recording the video with subtitles in real time. Keep this screen open.");
     grab.start(1000);
     v.play().catch((err) => { if (grab.state !== "inactive") grab.stop(); terminar(err.message); });
 
@@ -491,34 +501,40 @@
   });
 
   function activarGuardar(on) {
-    $("aFotos").disabled = !on; $("aArchivos").disabled = !on;
+    $("aElegir").disabled = !on; $("aArchivos").disabled = !on; $("abrirFiles").hidden = true;
     if (!on) $("final").hidden = true;
   }
 
-  // Photos: iOS only lets a web page reach Photos through its own menu, where you tap "Save Video".
-  $("aFotos").addEventListener("click", async () => {
+  function hecho(t) {
+    estado.textContent = t;
+    estado.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  // iPhone menu: the only place that asks where to save. "Save Video" = Photos, "Save to Files" = pick a folder.
+  $("aElegir").addEventListener("click", async () => {
     if (!listo) return;
     if (!(navigator.canShare && navigator.canShare({ files: [listo] }))) {
-      estado.textContent = "This browser can't send videos to Photos. Use Save to Files instead."; return;
+      hecho("This browser can't open the save menu. Use Download to the Downloads folder instead."); return;
     }
-    estado.textContent = "A menu will open. Tap Save Video to put it in Photos.";
     try {
       await navigator.share({ files: [listo] });
-      estado.textContent = "Menu closed. If you tapped Save Video, the video is in Photos (recents).";
+      hecho("Menu closed. If you chose Save Video, look in Photos (recents). If you chose Save to Files, look in the folder you picked.");
     } catch (err) {
-      estado.textContent = err.name === "AbortError"
-        ? "Cancelled. Tap Save to Photos to try again."
-        : "Couldn't open the menu (" + err.name + "). Use Save to Files instead.";
+      hecho(err.name === "AbortError"
+        ? "Cancelled, nothing was saved. Tap Choose where to save to try again."
+        : "The menu couldn't open (" + err.name + "). Use Download to the Downloads folder instead.");
     }
   });
 
-  // Files: a normal download. Safari may ask you to confirm, then the file goes to Downloads.
+  // Direct download: Safari saves it in Downloads without asking.
   $("aArchivos").addEventListener("click", () => {
     if (!listo) return;
     const a = document.createElement("a");
     a.href = URL.createObjectURL(listo); a.download = listo.name;
     document.body.appendChild(a); a.click(); a.remove();
-    estado.textContent = "If Safari asks, tap Download. Then open the Files app, Browse, Downloads, and look for " + listo.name + ".";
+    $("abrirFiles").hidden = false;
+    hecho("Download started: " + listo.name + " (" + (listo.size / 1048576).toFixed(1) +
+          " MB). If Safari asks, tap Download. A download arrow appears in the address bar. The file will be in the Files app, inside Downloads.");
   });
 
   function enlazar(r, n) {
