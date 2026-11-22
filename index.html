@@ -125,18 +125,13 @@
 
     <div class="fila">
       <div><label class="t" for="origen">Video language</label>
-        <select id="origen">
-          <option value="auto" selected>Auto-detect</option><option value="en">English</option>
-          <option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option>
-        </select></div>
+        <select id="origen"><option value="auto" selected>Auto-detect</option><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ar">Arabic</option><option value="hi">Hindi</option><option value="nl">Dutch</option><option value="sv">Swedish</option></select></div>
       <div class="flecha">→</div>
       <div><label class="t" for="destino">Translate to</label>
-        <select id="destino">
-          <option value="en">English</option><option value="es" selected>Spanish</option>
-          <option value="fr">French</option><option value="de">German</option>
-        </select></div>
+        <select id="destino"><option value="en">English</option><option value="es" selected>Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ar">Arabic</option><option value="hi">Hindi</option><option value="nl">Dutch</option><option value="sv">Swedish</option></select></div>
     </div>
 
+    <p class="nota">Between two languages that are not English, the translation goes through English.</p>
     <label class="t" for="modelo">Speech model</label>
     <select id="modelo">
       <option value="Xenova/whisper-tiny" selected>Fast</option>
@@ -221,7 +216,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v13</span>
+  <span>Open source · Runs on your device · v14</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -239,17 +234,26 @@
 
   const $ = (id) => document.getElementById(id);
   const estado = $("estado"), barra = $("barra"), ir = $("ir"), video = $("video");
-  const IDIOMAS = { en: "english", es: "spanish", fr: "french", de: "german" };
-  const PARES = {
-    "en-es": "Xenova/opus-mt-en-es", "es-en": "Xenova/opus-mt-es-en",
-    "en-fr": "Xenova/opus-mt-en-fr", "fr-en": "Xenova/opus-mt-fr-en",
-    "en-de": "Xenova/opus-mt-en-de", "de-en": "Xenova/opus-mt-de-en",
-  };
+  const IDIOMAS = { en: "english", es: "spanish", fr: "french", de: "german", it: "italian", pt: "portuguese",
+                    ru: "russian", zh: "chinese", ja: "japanese", ar: "arabic", hi: "hindi", nl: "dutch", sv: "swedish" };
+  const M = (p) => "Xenova/opus-mt-" + p;
+  const PARES = {};
+  ["es", "fr", "de", "it", "ru", "hi", "nl", "sv"].forEach((l) => { PARES["en-" + l] = M("en-" + l); PARES[l + "-en"] = M(l + "-en"); });
+  PARES["zh-en"] = M("zh-en"); PARES["ar-en"] = M("ar-en"); PARES["ja-en"] = M("ja-en"); PARES["pt-en"] = M("ROMANCE-en");
+  PARES["en-ja"] = M("en-jap");
+  PARES["en-zh"] = { id: M("en-zh"), pre: ">>cmn_Hans<< " };
+  PARES["en-ar"] = { id: M("en-ar"), pre: ">>ara<< " };
+  PARES["en-pt"] = { id: M("en-ROMANCE"), pre: ">>pt<< " };
+  ["es-fr", "fr-es", "es-de", "de-es", "es-it", "it-es", "es-ru", "ru-es", "fr-de", "de-fr", "fr-ru", "ru-fr"].forEach((x) => (PARES[x] = M(x)));
   const PALABRAS = {
     en: "the and is to of that it you in this was for with".split(" "),
     es: "el la de que y en los un es para una por con se".split(" "),
     fr: "le la les de et est que un une pas des pour dans".split(" "),
     de: "der die und das ist nicht ich zu ein mit auf den".split(" "),
+    it: "il lo la di che e un una per con non è sono del della".split(" "),
+    pt: "o a os as de que e um uma para com não é do da em".split(" "),
+    nl: "de het een en van dat is op te voor met niet".split(" "),
+    sv: "och att det som en är på av för med inte jag".split(" "),
   };
   let etiqueta = "", segmentos = [], urlVideo = null;
 
@@ -262,7 +266,14 @@
   }
 
   function detectar(textos) {
-    const pal = textos.join(" ").toLowerCase().match(/[a-zàâçéèêëîïôûùüäöß']+/g) || [];
+    const t = textos.join(" "), cuenta = (re) => (t.match(re) || []).length;
+    let mejorG = null, maxG = 0;
+    [["ja", /[\u3040-\u30ff]/g], ["zh", /[\u4e00-\u9fff]/g], ["ru", /[\u0400-\u04ff]/g],
+     ["ar", /[\u0600-\u06ff]/g], ["hi", /[\u0900-\u097f]/g]].forEach(([l, re]) => {
+      const n = cuenta(re); if (n > maxG) { maxG = n; mejorG = l; }
+    });
+    if (maxG > 5) return mejorG === "zh" && cuenta(/[\u3040-\u30ff]/g) > 3 ? "ja" : mejorG;
+    const pal = t.toLowerCase().match(/[a-zà-ÿ']+/g) || [];
     let mejor = null, max = 0;
     for (const [l, ws] of Object.entries(PALABRAS)) {
       const set = new Set(ws), n = pal.filter((w) => set.has(w)).length;
@@ -271,7 +282,28 @@
     return mejor;
   }
 
-  const ruta = (o, d) => (o === d ? [] : o === "en" || d === "en" ? [[o, d]] : [[o, "en"], ["en", d]]);
+  const ruta = (o, d) => {
+    if (o === d) return [];
+    if (PARES[o + "-" + d]) return [[o, d]];
+    if (PARES[o + "-en"] && PARES["en-" + d]) return [[o, "en"], ["en", d]];
+    return null;
+  };
+
+  // Translation models work best one sentence at a time, so long phrases are split first.
+  function frases(t) {
+    const out = [];
+    for (let p of t.match(/[^.!?。！？…]+[.!?。！？…]*\s*/g) || [t]) {
+      p = p.trim();
+      while (p.length > 220) {
+        let k = p.lastIndexOf(",", 200);
+        if (k < 60) k = p.lastIndexOf(" ", 200);
+        if (k < 60) k = 200;
+        out.push(p.slice(0, k + 1).trim()); p = p.slice(k + 1).trim();
+      }
+      if (p) out.push(p);
+    }
+    return out.length ? out : [t];
+  }
 
   async function audioDelArchivo(archivo) {
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -330,6 +362,7 @@
     if (!pipeline) { aviso("The engine did not load, so nothing can run. Reload the page with a good internet connection."); return; }
     const dest = $("destino").value;
     let orig = $("origen").value;
+    if (orig !== "auto" && !ruta(orig, dest)) { estado.textContent = "There is no translation model for that pair yet."; return; }
     ir.disabled = true; $("salida").style.display = "none"; $("zonaTop").append(estado, barra);
     try {
       etiqueta = "Downloading the speech model (first time only)…";
@@ -363,22 +396,35 @@
 
       let aviso = "";
       if (orig === "auto") orig = detectar(segmentos.map((s) => s.texto));
+      const camino = orig ? ruta(orig, dest) : null;
       if (!orig) aviso = " Couldn't tell the language, so there is no translation. Pick the video language and try again.";
-      else {
-        let textos = segmentos.map((s) => s.texto);
-        for (const [a, b] of ruta(orig, dest)) {
+      else if (!camino) aviso = " There is no translation model for that pair yet.";
+      else if (camino.length) {
+        let textos = segmentos.map((s) => s.texto), fallos = 0;
+        for (const [a, b] of camino) {
+          const def = PARES[a + "-" + b], id = typeof def === "string" ? def : def.id, pre = typeof def === "string" ? "" : def.pre;
+          const sep = b === "zh" || b === "ja" ? "" : " ";
           etiqueta = "Downloading translation model " + a + " → " + b + "…";
-          const tr = await pipeline("translation", PARES[a + "-" + b], { progress_callback: progreso });
+          const tr = await pipeline("translation", id, { progress_callback: progreso });
           const nuevos = [];
           for (let i = 0; i < textos.length; i++) {
-            const pct = Math.round(((i + 1) / textos.length) * 100); estado.textContent = "Translating… " + pct + "% (" + (i + 1) + " of " + textos.length + ", " + a + " → " + b + ")";
-            barra.hidden = false; barra.value = Math.round(((i + 1) / textos.length) * 100);
-            nuevos.push((await tr(textos[i], { max_new_tokens: 200 }))[0].translation_text);
+            const pct = Math.round(((i + 1) / textos.length) * 100);
+            estado.textContent = "Translating… " + pct + "% (" + (i + 1) + " of " + textos.length + ", " + a + " → " + b + ")";
+            barra.hidden = false; barra.value = pct;
+            let salida = "";
+            try {
+              for (const f of frases(textos[i])) {
+                const r = await tr(pre + f, { max_new_tokens: 256, no_repeat_ngram_size: 4 });
+                salida += (salida ? sep : "") + r[0].translation_text;
+              }
+            } catch (e) { fallos++; salida = textos[i]; }
+            nuevos.push(salida);
           }
           await tr.dispose();
           textos = nuevos;
         }
-        if (orig !== dest) segmentos.forEach((s, i) => (s.trad = textos[i]));
+        segmentos.forEach((s, i) => (s.trad = textos[i]));
+        if (fallos) aviso = " " + fallos + " phrase(s) couldn't be translated and stay in the original language.";
       }
       barra.hidden = true;
       mostrar(archivo);
