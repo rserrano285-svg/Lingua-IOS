@@ -132,11 +132,6 @@
     </div>
 
     <p class="nota">Between two languages that are not English, the translation goes through English.</p>
-    <label class="t" for="modelo">Speech model</label>
-    <select id="modelo">
-      <option value="Xenova/whisper-tiny" selected>Fast</option>
-      <option value="Xenova/whisper-base">Better (slower, uses more memory)</option>
-    </select>
 
     <div class="cab" style="margin-top:1.6rem"><span class="n">02</span><h2>Add your video</h2><span class="der">MP4, MOV, M4V · up to 8 min</span></div>
     <label class="drop" id="zona">
@@ -216,7 +211,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v15</span>
+  <span>Open source · Runs on your device · v16</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -305,6 +300,16 @@
     return out.length ? out : [t];
   }
 
+  function duracionVideo(archivo) {
+    return new Promise((ok) => {
+      const v = document.createElement("video"), u = URL.createObjectURL(archivo);
+      const fin = (d) => { URL.revokeObjectURL(u); ok(d); };
+      v.preload = "metadata"; v.onloadedmetadata = () => fin(v.duration); v.onerror = () => fin(NaN);
+      setTimeout(() => fin(NaN), 4000);
+      v.src = u;
+    });
+  }
+
   async function audioDelArchivo(archivo) {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     const ctx = new Ctx({ sampleRate: 16000 });
@@ -366,18 +371,18 @@
     ir.disabled = true; $("salida").style.display = "none"; $("zonaTop").append(estado, barra);
     try {
       etiqueta = "Downloading the speech model (first time only)…";
-      const asr = await pipeline("automatic-speech-recognition", $("modelo").value, { progress_callback: progreso });
+      const asr = await pipeline("automatic-speech-recognition", "Xenova/whisper-base", { progress_callback: progreso });
       barra.hidden = true;
       estado.textContent = "Extracting audio…";
       const audio = await audioDelArchivo(archivo);
+      const durVideo = await duracionVideo(archivo), leido = audio.length / 16000;
       estado.textContent = "Transcribing… 0%";
       barra.hidden = false; barra.value = 0;
       const base0 = { return_timestamps: true, task: "transcribe" };
-      if ($("modelo").value.includes("tiny")) base0.no_repeat_ngram_size = 5;   // only the Fast model tends to loop
       let idioma = orig !== "auto" ? IDIOMAS[orig] : null;
       const SR = 16000, TROZO = 30 * SR;
       segmentos = [];
-      let desdeM = 0, vacios = 0;
+      let desdeM = 0, vacios = 0, ventanas = 0;
       while (desdeM < audio.length) {
         let hastaM = Math.min(audio.length, desdeM + TROZO);
         if (hastaM < audio.length) hastaM = puntoSilencio(audio, hastaM - 4 * SR, hastaM);
@@ -385,6 +390,7 @@
         const base = desdeM / SR, largo = (hastaM - desdeM) / SR;
         const op = { ...base0 };
         if (idioma) op.language = idioma;
+        ventanas++;
         const sal = await asr(audio.subarray(desdeM, hastaM), op);
         let cs = (sal.chunks || []).filter((c) => c.text && c.text.trim());
         if (!cs.length && sal.text && sal.text.trim()) cs = [{ text: sal.text, timestamp: [0, largo] }];
@@ -422,7 +428,12 @@
         ? " Heads up: the subtitles end at " + mmss(ultimoFin) + " but the video lasts " + mmss(audio.length / SR) + " and there is still sound after that. Try again, or use Better."
         : "";
 
-      let aviso = cobertura;
+      const corto = durVideo && leido < durVideo - 3
+        ? " Only " + mmss(leido) + " of " + mmss(durVideo) + " of audio could be read from this video, so the subtitles can't go further."
+        : "";
+      const detalle = " Details: audio read " + Math.round(leido) + " s of " + (durVideo ? Math.round(durVideo) : "?") +
+        " s, " + ventanas + " windows, subtitles up to " + mmss(ultimoFin) + " (" + segmentos.length + " phrases).";
+      let aviso = cobertura + corto;
       if (orig === "auto") orig = detectar(segmentos.map((s) => s.texto));
       const camino = orig ? ruta(orig, dest) : null;
       if (!orig) aviso += " Couldn't tell the language, so there is no translation. Pick the video language and try again.";
@@ -456,7 +467,7 @@
       }
       barra.hidden = true;
       mostrar(archivo);
-      estado.textContent = "Done. Press play to see the subtitles." + aviso;
+      estado.textContent = "Done. Press play to see the subtitles." + aviso + detalle;
     } catch (e) {
       barra.hidden = true;
       estado.textContent = "Something went wrong: " + e.message;
