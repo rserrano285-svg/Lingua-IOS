@@ -71,6 +71,15 @@
   .sws { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; margin-top: .4rem; }
   .sw { width: 2.2rem; height: 2.2rem; border-radius: 50%; border: 2px solid var(--line); padding: 0; cursor: pointer; }
   .sws input[type=color] { width: 2.6rem; height: 2.2rem; }
+  .par { display: flex; gap: .6rem; align-items: center; }
+  .par input[type=range] { flex: 1; min-width: 0; }
+  .par input[type=number], .sws input[type=text] { font: inherit; color: var(--ink); background: var(--bg);
+        border: 1px solid var(--line); border-radius: 8px; padding: .45rem; text-align: center; }
+  .par input[type=number] { width: 4.4rem; }
+  .mm { width: 2.4rem; height: 2.4rem; flex: none; border-radius: 10px; border: 1px solid var(--line);
+        background: var(--bg); color: var(--ink); font-size: 1.3rem; line-height: 1; padding: 0; cursor: pointer; }
+  .botones .prim { margin-top: 0; }
+  .sws input[type=text] { width: 6.2rem; }
   .prim { width: 100%; font: inherit; font-weight: 700; border: 0; border-radius: 10px; padding: .9rem; margin-top: .9rem;
           background: var(--accent); color: #07101a; cursor: pointer; }
   .prim:disabled { background: var(--off); color: var(--off-ink); cursor: default; }
@@ -91,6 +100,8 @@
   <div class="logo">L</div><b>lingua</b>
   <span><i class="dot"></i>Your videos stay on this device</span>
 </div>
+
+<div id="aviso" role="alert" hidden style="margin:1rem 1.1rem 0;padding:.8rem 1rem;border:1px solid #7a2e2e;background:#2a1517;color:#ffb4b4;border-radius:10px;font-size:.85rem"></div>
 
 <main>
   <div class="eyebrow">Video, understood</div>
@@ -146,10 +157,14 @@
     </div>
     <p class="nota" style="margin-top:.9rem">Subtitle style</p>
     <div class="ctl">
-      <label>Size <input id="tam" type="range" min="3" max="12" step="0.5" value="6"></label>
-      <label>Height (low → high) <input id="pos" type="range" min="6" max="92" value="14"></label>
+      <label style="grid-column:1/-1">Text size (% of the video height)
+        <span class="par"><input id="tam" type="range" min="3" max="12" step="0.5" value="6">
+        <input id="tamN" type="number" min="3" max="12" step="0.5" value="6" inputmode="decimal" aria-label="Text size number"></span></label>
+      <label style="grid-column:1/-1">Height (4 = bottom, 96 = top)
+        <span class="par"><input id="pos" type="range" min="4" max="96" step="1" value="14">
+        <input id="posN" type="number" min="4" max="96" step="1" value="14" inputmode="numeric" aria-label="Height number"></span></label>
       <div style="grid-column:1/-1">Text color
-        <div class="sws">
+        <div class="sws" data-pick="color" data-hex="hex">
           <button type="button" class="sw" data-c="#ffffff" style="background:#ffffff" aria-label="White"></button>
           <button type="button" class="sw" data-c="#ffd60a" style="background:#ffd60a" aria-label="Yellow"></button>
           <button type="button" class="sw" data-c="#64d2ff" style="background:#64d2ff" aria-label="Light blue"></button>
@@ -157,12 +172,33 @@
           <button type="button" class="sw" data-c="#ff9f0a" style="background:#ff9f0a" aria-label="Orange"></button>
           <button type="button" class="sw" data-c="#ff6b9d" style="background:#ff6b9d" aria-label="Pink"></button>
           <input id="color" type="color" value="#ffffff" aria-label="Custom color">
+          <input id="hex" type="text" value="#ffffff" maxlength="7" spellcheck="false" autocapitalize="off" aria-label="Color code">
         </div>
       </div>
-      <label class="chk" style="grid-column:1/-1"><input id="fondo" type="checkbox" checked> Dark background behind text</label>
+      <label class="chk" style="grid-column:1/-1"><input id="fondo" type="checkbox" checked> Show a background behind the text</label>
+      <div style="grid-column:1/-1">Background color
+        <div class="sws" data-pick="bgcolor" data-hex="bghex">
+          <button type="button" class="sw" data-c="#000000" style="background:#000000" aria-label="Black"></button>
+          <button type="button" class="sw" data-c="#333333" style="background:#333333" aria-label="Dark gray"></button>
+          <button type="button" class="sw" data-c="#0a2540" style="background:#0a2540" aria-label="Navy"></button>
+          <button type="button" class="sw" data-c="#8b1e1e" style="background:#8b1e1e" aria-label="Dark red"></button>
+          <button type="button" class="sw" data-c="#ffd60a" style="background:#ffd60a" aria-label="Yellow"></button>
+          <button type="button" class="sw" data-c="#ffffff" style="background:#ffffff" aria-label="White"></button>
+          <input id="bgcolor" type="color" value="#000000" aria-label="Custom background color">
+          <input id="bghex" type="text" value="#000000" maxlength="7" spellcheck="false" autocapitalize="off" aria-label="Background color code">
+        </div>
+      </div>
+      <label style="grid-column:1/-1">Background opacity (%)
+        <span class="par"><input id="opa" type="range" min="10" max="100" step="5" value="60">
+        <input id="opaN" type="number" min="10" max="100" step="5" value="60" inputmode="numeric" aria-label="Background opacity number"></span></label>
     </div>
     <button id="grabar" class="prim">Step 1: Create video with subtitles</button>
-    <button id="guardar" class="prim" disabled>Step 2: Save video</button>
+    <video id="final" controls playsinline hidden style="margin-top:.9rem;width:100%;border-radius:12px;background:#000"></video>
+    <p class="nota" style="margin-top:.9rem">Step 2: choose where to save the finished video</p>
+    <div class="botones">
+      <button id="aFotos" class="prim" disabled>Save to Photos</button>
+      <button id="aArchivos" class="prim" disabled>Save to Files</button>
+    </div>
     <div class="botones">
       <button id="srt">Download subtitles (.srt)</button>
       <button id="copiar">Copy text</button>
@@ -172,13 +208,21 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device</span>
+  <span>Open source · Runs on your device · v8</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
 <script type="module">
-  import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2";
-  env.allowLocalModels = false;
+  const aviso = (m) => { const a = document.getElementById("aviso"); a.textContent = m; a.hidden = false; };
+  window.addEventListener("error", (e) => aviso("Error: " + e.message));
+  window.addEventListener("unhandledrejection", (e) => aviso("Error: " + ((e.reason && e.reason.message) || e.reason)));
+  let pipeline, env;
+  try {
+    ({ pipeline, env } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2"));
+    env.allowLocalModels = false;
+  } catch (e) {
+    aviso("The speech and translation engine did not load (" + e.message + "). Check your internet connection and reload the page.");
+  }
 
   const $ = (id) => document.getElementById(id);
   const estado = $("estado"), barra = $("barra"), ir = $("ir"), video = $("video");
@@ -237,7 +281,7 @@
     urlVideo = URL.createObjectURL(archivo);
     const rep = $("reproductor");
     rep.innerHTML = ""; rep.src = urlVideo;
-    $("guardar").disabled = true;
+    activarGuardar(false);
 
     const lista = $("lista");
     lista.innerHTML = "";
@@ -269,6 +313,7 @@
   ir.addEventListener("click", async () => {
     const archivo = video.files[0];
     if (!archivo) return;
+    if (!pipeline) { aviso("The engine did not load, so nothing can run. Reload the page with a good internet connection."); return; }
     const dest = $("destino").value;
     let orig = $("origen").value;
     ir.disabled = true; $("salida").style.display = "none";
@@ -339,7 +384,9 @@
   // ---- Subtitle style, live overlay and video export ----
   const rep = $("reproductor"), capa = $("sub");
   const estilo = () => ({ tam: +$("tam").value / 100, pos: 1 - +$("pos").value / 100,
-                          color: $("color").value, fondo: $("fondo").checked });
+                          color: $("color").value, fondo: $("fondo").checked,
+                          fcolor: $("bgcolor").value, opa: +$("opa").value / 100 });
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")"; };
   const textoEn = (t) => { const s = segmentos.find((x) => t >= x.ini && t < x.fin); return s ? texto(s) : ""; };
 
   function actualizarSub() {
@@ -350,7 +397,7 @@
     capa.style.fontSize = e.tam * rep.clientHeight + "px";
     capa.style.top = e.pos * 100 + "%";
     capa.style.color = e.color;
-    capa.style.background = e.fondo ? "rgba(0,0,0,.6)" : "transparent";
+    capa.style.background = e.fondo ? rgba(e.fcolor, e.opa) : "transparent";
     capa.style.textShadow = e.fondo ? "none" : "0 0 4px #000, 0 0 4px #000, 0 0 2px #000";
   }
   (function bucle() { actualizarSub(); requestAnimationFrame(bucle); })();
@@ -374,7 +421,7 @@
     const alto = px * 1.2, total = alto * lineas.length, cy = e.pos * H;
     if (e.fondo) {
       const ancho = Math.max(...lineas.map((l) => c.measureText(l).width)) + px * 0.8;
-      c.fillStyle = "rgba(0,0,0,.6)";
+      c.fillStyle = rgba(e.fcolor, e.opa);
       c.fillRect(W / 2 - ancho / 2, cy - total / 2 - px * 0.15, ancho, total + px * 0.3);
     }
     lineas.forEach((l, i) => {
@@ -390,7 +437,7 @@
     if (!window.MediaRecorder || !segmentos.length) {
       estado.textContent = "This browser can't record video. Update Safari and try again."; return;
     }
-    const btn = $("grabar"); btn.disabled = true; $("guardar").disabled = true; listo = null;
+    const btn = $("grabar"); btn.disabled = true; activarGuardar(false); listo = null;
     rep.pause();
     const e = estilo();
     const esc = Math.min(1, 1280 / Math.max(rep.videoWidth, rep.videoHeight));
@@ -421,8 +468,9 @@
       if (error) { estado.textContent = "Something went wrong: " + error; return; }
       const ext = (grab.mimeType || tipo).includes("mp4") ? "mp4" : "webm";
       listo = new File(trozos, "video-with-subtitles." + ext, { type: "video/" + ext });
-      $("guardar").disabled = false;
-      estado.textContent = "Your video is ready. Now tap Step 2: Save video.";
+      activarGuardar(true);
+      $("final").src = URL.createObjectURL(listo); $("final").hidden = false;
+      estado.textContent = "Your video is ready. Watch it above, then choose Save to Photos or Save to Files.";
     };
     grab.onstop = () => terminar(null);
     v.onerror = () => { if (grab.state !== "inactive") grab.stop(); terminar("couldn't read the video"); };
@@ -442,31 +490,72 @@
     pintar();
   });
 
-  function descargar() {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(listo); a.download = listo.name; a.click();
-    estado.textContent = "Downloaded. Open the Files app and look in Downloads.";
+  function activarGuardar(on) {
+    $("aFotos").disabled = !on; $("aArchivos").disabled = !on;
+    if (!on) $("final").hidden = true;
   }
 
-  $("guardar").addEventListener("click", async () => {
+  // Photos: iOS only lets a web page reach Photos through its own menu, where you tap "Save Video".
+  $("aFotos").addEventListener("click", async () => {
     if (!listo) return;
-    if (navigator.canShare && navigator.canShare({ files: [listo] })) {
-      estado.textContent = "In the menu that opens, choose Save Video (goes to Photos) or Save to Files (you pick the folder).";
-      try {
-        await navigator.share({ files: [listo] });
-        estado.textContent = "Done. Check Photos, or the folder you chose in Files.";
-      } catch (err) {
-        if (err.name === "AbortError") { estado.textContent = "Saving was cancelled. Tap Step 2 to try again."; return; }
-        estado.textContent = "The share menu failed (" + err.name + "). Downloading instead…";
-        descargar();
-      }
-      return;
+    if (!(navigator.canShare && navigator.canShare({ files: [listo] }))) {
+      estado.textContent = "This browser can't send videos to Photos. Use Save to Files instead."; return;
     }
-    descargar();
+    estado.textContent = "A menu will open. Tap Save Video to put it in Photos.";
+    try {
+      await navigator.share({ files: [listo] });
+      estado.textContent = "Menu closed. If you tapped Save Video, the video is in Photos (recents).";
+    } catch (err) {
+      estado.textContent = err.name === "AbortError"
+        ? "Cancelled. Tap Save to Photos to try again."
+        : "Couldn't open the menu (" + err.name + "). Use Save to Files instead.";
+    }
   });
 
-  document.querySelectorAll(".sw").forEach((b) =>
-    b.addEventListener("click", () => { $("color").value = b.dataset.c; }));
+  // Files: a normal download. Safari may ask you to confirm, then the file goes to Downloads.
+  $("aArchivos").addEventListener("click", () => {
+    if (!listo) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(listo); a.download = listo.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    estado.textContent = "If Safari asks, tap Download. Then open the Files app, Browse, Downloads, and look for " + listo.name + ".";
+  });
+
+  function enlazar(r, n) {
+    r.addEventListener("input", () => { n.value = r.value; });
+    n.addEventListener("input", () => { if (n.value !== "" && !isNaN(+n.value)) r.value = n.value; });
+    n.addEventListener("change", () => { n.value = r.value; });
+  }
+  enlazar($("tam"), $("tamN"));
+  enlazar($("pos"), $("posN"));
+  enlazar($("opa"), $("opaN"));
+
+  // − and + buttons around each number box
+  document.querySelectorAll(".par").forEach((p) => {
+    const r = p.querySelector("input[type=range]"), n = p.querySelector("input[type=number]");
+    const paso = +r.step || 1;
+    const hacer = (txt, nombre, d) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "mm"; b.textContent = txt; b.setAttribute("aria-label", nombre);
+      b.addEventListener("click", () => { r.value = Math.round((+r.value + d * paso) * 100) / 100; n.value = r.value; });
+      return b;
+    };
+    n.before(hacer("−", "Decrease", -1));
+    n.after(hacer("+", "Increase", 1));
+  });
+
+  // Color groups: quick colors, picker and color code
+  document.querySelectorAll(".sws").forEach((g) => {
+    const pick = $(g.dataset.pick), hex = $(g.dataset.hex);
+    g.querySelectorAll(".sw").forEach((b) => b.addEventListener("click", () => { pick.value = b.dataset.c; hex.value = b.dataset.c; }));
+    pick.addEventListener("input", () => { hex.value = pick.value; });
+    hex.addEventListener("input", () => {
+      let v = hex.value.trim();
+      if (v && v[0] !== "#") v = "#" + v;
+      if (/^#[0-9a-f]{6}$/i.test(v)) pick.value = v.toLowerCase();
+    });
+    hex.addEventListener("change", () => { hex.value = pick.value; });
+  });
 </script>
 </body>
 </html>
