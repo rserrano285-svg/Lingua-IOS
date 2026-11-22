@@ -205,13 +205,10 @@
     <button id="grabar" class="prim">Step 1: Create video with subtitles</button>
     <video id="final" controls playsinline hidden style="margin-top:.9rem;width:100%;border-radius:12px;background:#000"></video>
     <p class="nota" style="margin-top:.9rem">Step 2: choose where to save the finished video</p>
-    <button id="aElegir" class="prim" disabled>Save video</button>
-    <p class="nota">The iPhone will ask where: tap <b>Save Video</b> for Photos, or <b>Save to Files</b> to pick a folder.</p>
-    <button id="dondeBtn" class="sec" type="button" aria-expanded="false">Where does it go?</button>
-    <div id="dondeInfo" class="nota" hidden>
-      <b>Photos (Fototeca):</b> in the menu tap <b>Save Video</b>. Then open the Photos app and look in Recents.<br>
-      <b>Files (Archivos):</b> in the menu tap <b>Save to Files</b> and pick a folder. Then open the Files app and look in that folder.
-    </div>
+    <button id="aFotos" class="prim" disabled>Save to Photos</button>
+    <p class="nota">Goes to the Photos app (Fototeca), in Recents. In the menu that opens, tap <b>Save Video</b>.</p>
+    <button id="aArchivos" class="prim" disabled>Save to Files</button>
+    <p class="nota">Goes to the Files app (Archivos), in the folder you choose. In the menu that opens, tap <b>Save to Files</b>, pick a folder and tap Save.</p>
     <div id="zonaMsg"></div>
     <div class="botones">
       <button id="srt">Download subtitles (.srt)</button>
@@ -222,7 +219,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v11</span>
+  <span>Open source · Runs on your device · v12</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -528,13 +525,8 @@
     return Math.floor(mejor);
   }
 
-  $("dondeBtn").addEventListener("click", () => {
-    const i = $("dondeInfo"); i.hidden = !i.hidden;
-    $("dondeBtn").setAttribute("aria-expanded", String(!i.hidden));
-  });
-
   function activarGuardar(on) {
-    $("aElegir").disabled = !on;
+    $("aFotos").disabled = !on; $("aArchivos").disabled = !on;
     if (!on) $("final").hidden = true;
   }
 
@@ -543,23 +535,32 @@
     estado.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
-  // One button. The iPhone menu is what asks where to save: "Save Video" = Photos, "Save to Files" = a folder you pick.
-  $("aElegir").addEventListener("click", async () => {
+  // Both buttons open the iPhone save menu (the only way a web page can reach Photos or a Files folder).
+  async function guardar(antes, despues) {
     if (!listo) return;
     if (navigator.canShare && navigator.canShare({ files: [listo] })) {
+      hecho(antes);
       try {
         await navigator.share({ files: [listo] });
-        hecho("Menu closed. If you chose Save Video, look in Photos (recents). If you chose Save to Files, look in the folder you picked.");
+        hecho(despues);
         return;
       } catch (err) {
-        if (err.name === "AbortError") { hecho("Cancelled, nothing was saved. Tap Save video to try again."); return; }
+        if (err.name === "AbortError") { hecho("Cancelled, nothing was saved. Tap the button to try again."); return; }
       }
     }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(listo); a.download = listo.name;
     document.body.appendChild(a); a.click(); a.remove();
-    hecho("The save menu isn't available here, so the video was downloaded: " + listo.name + ". Look in the Files app, inside Downloads.");
-  });
+    hecho("The save menu isn't available here, so the video was downloaded as " + listo.name +
+          ". Open the Files app and tap Recents, or look in Browse, Downloads.");
+  }
+  const nombre = () => (listo ? listo.name : "video-with-subtitles");
+  $("aFotos").addEventListener("click", () => guardar(
+    "In the menu, tap Save Video. If you don't see it, swipe along the row of actions.",
+    "Menu closed. If you tapped Save Video, open the Photos app and look in Recents."));
+  $("aArchivos").addEventListener("click", () => guardar(
+    "In the menu, scroll down and tap Save to Files, pick a folder and tap Save.",
+    "Menu closed. If you tapped Save to Files, open the Files app and look in the folder you picked, or tap Recents and search for " + nombre() + "."));
 
   function enlazar(r, n) {
     r.addEventListener("input", () => { n.value = r.value; });
