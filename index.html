@@ -202,12 +202,9 @@
     <button id="grabar" class="prim">Step 1: Create video with subtitles</button>
     <video id="final" controls playsinline hidden style="margin-top:.9rem;width:100%;border-radius:12px;background:#000"></video>
     <p class="nota" style="margin-top:.9rem">Step 2: choose where to save the finished video</p>
-    <button id="aElegir" class="prim" disabled>Choose where to save</button>
-    <p class="nota">Opens the iPhone menu. Tap <b>Save Video</b> to put it in Photos, or <b>Save to Files</b> to pick a folder.</p>
-    <button id="aArchivos" class="prim" disabled>Download to the Downloads folder</button>
-    <p class="nota">No questions asked. Safari saves it in the Files app, inside Downloads.</p>
+    <button id="aElegir" class="prim" disabled>Save video</button>
+    <p class="nota">The iPhone will ask where: tap <b>Save Video</b> for Photos, or <b>Save to Files</b> to pick a folder.</p>
     <div id="zonaMsg"></div>
-    <a id="abrirFiles" href="shareddocuments://" hidden>Open the Files app</a>
     <div class="botones">
       <button id="srt">Download subtitles (.srt)</button>
       <button id="copiar">Copy text</button>
@@ -217,7 +214,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v9</span>
+  <span>Open source · Runs on your device · v10</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -501,7 +498,7 @@
   });
 
   function activarGuardar(on) {
-    $("aElegir").disabled = !on; $("aArchivos").disabled = !on; $("abrirFiles").hidden = true;
+    $("aElegir").disabled = !on;
     if (!on) $("final").hidden = true;
   }
 
@@ -510,31 +507,22 @@
     estado.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
-  // iPhone menu: the only place that asks where to save. "Save Video" = Photos, "Save to Files" = pick a folder.
+  // One button. The iPhone menu is what asks where to save: "Save Video" = Photos, "Save to Files" = a folder you pick.
   $("aElegir").addEventListener("click", async () => {
     if (!listo) return;
-    if (!(navigator.canShare && navigator.canShare({ files: [listo] }))) {
-      hecho("This browser can't open the save menu. Use Download to the Downloads folder instead."); return;
+    if (navigator.canShare && navigator.canShare({ files: [listo] })) {
+      try {
+        await navigator.share({ files: [listo] });
+        hecho("Menu closed. If you chose Save Video, look in Photos (recents). If you chose Save to Files, look in the folder you picked.");
+        return;
+      } catch (err) {
+        if (err.name === "AbortError") { hecho("Cancelled, nothing was saved. Tap Save video to try again."); return; }
+      }
     }
-    try {
-      await navigator.share({ files: [listo] });
-      hecho("Menu closed. If you chose Save Video, look in Photos (recents). If you chose Save to Files, look in the folder you picked.");
-    } catch (err) {
-      hecho(err.name === "AbortError"
-        ? "Cancelled, nothing was saved. Tap Choose where to save to try again."
-        : "The menu couldn't open (" + err.name + "). Use Download to the Downloads folder instead.");
-    }
-  });
-
-  // Direct download: Safari saves it in Downloads without asking.
-  $("aArchivos").addEventListener("click", () => {
-    if (!listo) return;
     const a = document.createElement("a");
     a.href = URL.createObjectURL(listo); a.download = listo.name;
     document.body.appendChild(a); a.click(); a.remove();
-    $("abrirFiles").hidden = false;
-    hecho("Download started: " + listo.name + " (" + (listo.size / 1048576).toFixed(1) +
-          " MB). If Safari asks, tap Download. A download arrow appears in the address bar. The file will be in the Files app, inside Downloads.");
+    hecho("The save menu isn't available here, so the video was downloaded: " + listo.name + ". Look in the Files app, inside Downloads.");
   });
 
   function enlazar(r, n) {
