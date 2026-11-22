@@ -216,7 +216,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v14</span>
+  <span>Open source · Runs on your device · v15</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -372,33 +372,61 @@
       const audio = await audioDelArchivo(archivo);
       estado.textContent = "Transcribing… 0%";
       barra.hidden = false; barra.value = 0;
-      const opciones = { return_timestamps: true, task: "transcribe", no_repeat_ngram_size: 5 };
-      if (orig !== "auto") opciones.language = IDIOMAS[orig];
+      const base0 = { return_timestamps: true, task: "transcribe" };
+      if ($("modelo").value.includes("tiny")) base0.no_repeat_ngram_size = 5;   // only the Fast model tends to loop
+      let idioma = orig !== "auto" ? IDIOMAS[orig] : null;
       const SR = 16000, TROZO = 30 * SR;
       segmentos = [];
-      for (let desdeM = 0; desdeM < audio.length; ) {
+      let desdeM = 0, vacios = 0;
+      while (desdeM < audio.length) {
         let hastaM = Math.min(audio.length, desdeM + TROZO);
         if (hastaM < audio.length) hastaM = puntoSilencio(audio, hastaM - 4 * SR, hastaM);
         if (hastaM - desdeM < SR / 2) break;
-        const base = desdeM / SR;
-        const sal = await asr(audio.subarray(desdeM, hastaM), opciones);
-        const cs = sal.chunks && sal.chunks.length ? sal.chunks : [{ text: sal.text || "", timestamp: [0, (hastaM - desdeM) / SR] }];
-        cs.forEach((c) => {
-          const t = c.text.trim(), a = (c.timestamp[0] ?? 0) + base;
-          if (t && (!segmentos.length || segmentos[segmentos.length - 1].texto !== t))
-            segmentos.push({ ini: a, fin: (c.timestamp[1] ?? (c.timestamp[0] ?? 0) + 3) + base, texto: t });
-        });
-        desdeM = hastaM;
-        const pct = Math.round((desdeM / audio.length) * 100);
+        const base = desdeM / SR, largo = (hastaM - desdeM) / SR;
+        const op = { ...base0 };
+        if (idioma) op.language = idioma;
+        const sal = await asr(audio.subarray(desdeM, hastaM), op);
+        let cs = (sal.chunks || []).filter((c) => c.text && c.text.trim());
+        if (!cs.length && sal.text && sal.text.trim()) cs = [{ text: sal.text, timestamp: [0, largo] }];
+        let avance = hastaM;
+        if (cs.length) {
+          vacios = 0;
+          cs.forEach((c) => {
+            const t = c.text.trim(), a = (c.timestamp[0] ?? 0) + base;
+            if (!segmentos.length || segmentos[segmentos.length - 1].texto !== t)
+              segmentos.push({ ini: a, fin: (c.timestamp[1] ?? (c.timestamp[0] ?? 0) + 3) + base, texto: t });
+          });
+          // Whisper sometimes stops before the end of its window: carry on from where it stopped.
+          const ultimo = cs[cs.length - 1].timestamp[1];
+          if (ultimo != null && ultimo < largo - 3 && hayVoz(audio, desdeM + ultimo * SR, hastaM))
+            avance = Math.max(desdeM + Math.round(ultimo * SR), desdeM + 5 * SR);
+          // With Auto-detect, fix the language after the first result so later windows can't switch language.
+          if (!idioma && orig === "auto") {
+            const d = detectar(segmentos.map((s) => s.texto));
+            if (d && IDIOMAS[d]) idioma = IDIOMAS[d];
+          }
+        } else if (hayVoz(audio, desdeM, hastaM)) {
+          // Nothing came out although there is sound: look again from a later point.
+          vacios++;
+          avance = Math.min(hastaM, desdeM + (vacios === 1 ? 10 : 20) * SR);
+        }
+        desdeM = avance;
+        const pct = Math.min(100, Math.round((desdeM / audio.length) * 100));
         barra.value = pct; estado.textContent = "Transcribing… " + pct + "%";
       }
       await asr.dispose();
 
-      let aviso = "";
+      const mmss = (s) => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+      const ultimoFin = segmentos.length ? segmentos[segmentos.length - 1].fin : 0;
+      const cobertura = hayVoz(audio, (ultimoFin + 5) * SR, audio.length)
+        ? " Heads up: the subtitles end at " + mmss(ultimoFin) + " but the video lasts " + mmss(audio.length / SR) + " and there is still sound after that. Try again, or use Better."
+        : "";
+
+      let aviso = cobertura;
       if (orig === "auto") orig = detectar(segmentos.map((s) => s.texto));
       const camino = orig ? ruta(orig, dest) : null;
-      if (!orig) aviso = " Couldn't tell the language, so there is no translation. Pick the video language and try again.";
-      else if (!camino) aviso = " There is no translation model for that pair yet.";
+      if (!orig) aviso += " Couldn't tell the language, so there is no translation. Pick the video language and try again.";
+      else if (!camino) aviso += " There is no translation model for that pair yet.";
       else if (camino.length) {
         let textos = segmentos.map((s) => s.texto), fallos = 0;
         for (const [a, b] of camino) {
@@ -424,7 +452,7 @@
           textos = nuevos;
         }
         segmentos.forEach((s, i) => (s.trad = textos[i]));
-        if (fallos) aviso = " " + fallos + " phrase(s) couldn't be translated and stay in the original language.";
+        if (fallos) aviso += " " + fallos + " phrase(s) couldn't be translated and stay in the original language.";
       }
       barra.hidden = true;
       mostrar(archivo);
@@ -560,6 +588,17 @@
     };
     pintar();
   });
+
+  // True if there are at least 1.5 s of sound between two points (in samples).
+  function hayVoz(a, desde, hasta) {
+    const V = 8000; let n = 0;
+    for (let i = Math.max(0, Math.floor(desde)); i + V <= hasta; i += V) {
+      let e = 0;
+      for (let j = i; j < i + V; j += 4) e += a[j] * a[j];
+      if (Math.sqrt(e / (V / 4)) > 0.006) n++;
+    }
+    return n >= 3;
+  }
 
   // Cut the audio at the quietest moment of the last 4 seconds, so words are not split in half.
   function puntoSilencio(a, desde, hasta) {
