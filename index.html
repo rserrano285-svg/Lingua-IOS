@@ -209,6 +209,8 @@
     <p class="nota">Goes to the Photos app (Fototeca), in Recents. In the menu that opens, tap <b>Save Video</b>.</p>
     <button id="aArchivos" class="prim" disabled>Save to Files</button>
     <p class="nota">Goes to the Files app (Archivos), in the folder you choose. In the menu that opens, tap <b>Save to Files</b>, pick a folder and tap Save.</p>
+    <p class="nota">The iPhone menu also lists apps like WhatsApp. Apple doesn't let a web page hide them, so just ignore them and pick <b>Save Video</b> or <b>Save to Files</b>.</p>
+    <div id="resumen" class="nota" hidden style="color:var(--ink)"></div>
     <div id="zonaMsg"></div>
     <div class="botones">
       <button id="srt">Download subtitles (.srt)</button>
@@ -219,7 +221,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v12</span>
+  <span>Open source · Runs on your device · v13</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -527,7 +529,7 @@
 
   function activarGuardar(on) {
     $("aFotos").disabled = !on; $("aArchivos").disabled = !on;
-    if (!on) $("final").hidden = true;
+    if (!on) { $("final").hidden = true; $("resumen").hidden = true; }
   }
 
   function hecho(t) {
@@ -535,32 +537,48 @@
     estado.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
-  // Both buttons open the iPhone save menu (the only way a web page can reach Photos or a Files folder).
-  async function guardar(antes, despues) {
-    if (!listo) return;
-    if (navigator.canShare && navigator.canShare({ files: [listo] })) {
-      hecho(antes);
-      try {
-        await navigator.share({ files: [listo] });
-        hecho(despues);
-        return;
-      } catch (err) {
-        if (err.name === "AbortError") { hecho("Cancelled, nothing was saved. Tap the button to try again."); return; }
-      }
-    }
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(listo); a.download = listo.name;
-    document.body.appendChild(a); a.click(); a.remove();
-    hecho("The save menu isn't available here, so the video was downloaded as " + listo.name +
-          ". Open the Files app and tap Recents, or look in Browse, Downloads.");
+  function resumir(destino) {
+    const r = $("resumen");
+    r.textContent = "Last save: " + listo.name + " (" + (listo.size / 1048576).toFixed(1) + " MB) → " + destino;
+    r.hidden = false;
   }
-  const nombre = () => (listo ? listo.name : "video-with-subtitles");
+
+  // Both buttons open the iPhone save menu (the only way a web page can reach Photos or a Files folder).
+  async function guardar(antes, despues, destino) {
+    if (!listo) return;
+    const botones = [$("aFotos"), $("aArchivos")];
+    botones.forEach((b) => (b.disabled = true));
+    barra.hidden = false; barra.removeAttribute("value");   // moving bar while the menu opens
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [listo] })) {
+        hecho(antes);
+        try {
+          await navigator.share({ files: [listo] });
+          hecho(despues); resumir(destino);
+          return;
+        } catch (err) {
+          if (err.name === "AbortError") { hecho("Cancelled, nothing was saved. Tap the button to try again."); return; }
+        }
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(listo); a.download = listo.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      hecho("The save menu isn't available here, so the video was downloaded as " + listo.name +
+            ". Open the Files app and tap Recents, or look in Browse, Downloads.");
+      resumir("Files app, Browse > Downloads (also under Recents)");
+    } finally {
+      barra.hidden = true; barra.value = 0;
+      botones.forEach((b) => (b.disabled = false));
+    }
+  }
   $("aFotos").addEventListener("click", () => guardar(
-    "In the menu, tap Save Video. If you don't see it, swipe along the row of actions.",
-    "Menu closed. If you tapped Save Video, open the Photos app and look in Recents."));
+    "Opening the iPhone menu… tap Save Video. If you don't see it, swipe along the row of actions.",
+    "Menu closed. If you tapped Save Video, open the Photos app and look in Recents.",
+    "Photos app (Fototeca), in Recents"));
   $("aArchivos").addEventListener("click", () => guardar(
-    "In the menu, scroll down and tap Save to Files, pick a folder and tap Save.",
-    "Menu closed. If you tapped Save to Files, open the Files app and look in the folder you picked, or tap Recents and search for " + nombre() + "."));
+    "Opening the iPhone menu… scroll down and tap Save to Files, pick a folder and tap Save.",
+    "Menu closed. If you tapped Save to Files, open the Files app and look in the folder you picked, or tap Recents and search for " + (listo ? listo.name : "video-with-subtitles") + ".",
+    "Files app (Archivos), in the folder you picked (also under Recents)"));
 
   function enlazar(r, n) {
     r.addEventListener("input", () => { n.value = r.value; });
