@@ -55,7 +55,7 @@
         background: var(--accent); color: #07101a; cursor: pointer; }
   #ir:disabled { background: var(--off); color: var(--off-ink); cursor: default; }
   #estado { margin: 1rem 0 .4rem; color: var(--muted); min-height: 1.4em; }
-  progress { width: 100%; height: .5rem; accent-color: var(--accent); }
+  progress { width: 100%; height: .9rem; accent-color: var(--accent); }
   #salida { display: none; margin-top: 1.2rem; }
   [hidden] { display: none !important; }
   .visor { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; }
@@ -79,6 +79,9 @@
   .mm { width: 2.4rem; height: 2.4rem; flex: none; border-radius: 10px; border: 1px solid var(--line);
         background: var(--bg); color: var(--ink); font-size: 1.3rem; line-height: 1; padding: 0; cursor: pointer; }
   .botones .prim { margin-top: 0; }
+  .sec { width: 100%; font: inherit; font-weight: 600; color: var(--ink); background: transparent;
+         border: 1px solid var(--line); border-radius: 10px; padding: .7rem; margin-top: .6rem; cursor: pointer; }
+  #dondeInfo { margin-top: .6rem; line-height: 1.6; }
   #zonaMsg { margin-top: .9rem; }
   #zonaMsg #estado { color: var(--ink); background: var(--bg); border: 1px solid var(--accent); border-radius: 10px;
                      padding: .7rem .8rem; min-height: 0; margin: 0 0 .6rem; }
@@ -204,6 +207,11 @@
     <p class="nota" style="margin-top:.9rem">Step 2: choose where to save the finished video</p>
     <button id="aElegir" class="prim" disabled>Save video</button>
     <p class="nota">The iPhone will ask where: tap <b>Save Video</b> for Photos, or <b>Save to Files</b> to pick a folder.</p>
+    <button id="dondeBtn" class="sec" type="button" aria-expanded="false">Where does it go?</button>
+    <div id="dondeInfo" class="nota" hidden>
+      <b>Photos (Fototeca):</b> in the menu tap <b>Save Video</b>. Then open the Photos app and look in Recents.<br>
+      <b>Files (Archivos):</b> in the menu tap <b>Save to Files</b> and pick a folder. Then open the Files app and look in that folder.
+    </div>
     <div id="zonaMsg"></div>
     <div class="botones">
       <button id="srt">Download subtitles (.srt)</button>
@@ -214,7 +222,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v10</span>
+  <span>Open source · Runs on your device · v11</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -330,18 +338,29 @@
       barra.hidden = true;
       estado.textContent = "Extracting audio…";
       const audio = await audioDelArchivo(archivo);
-      estado.textContent = "Transcribing… this can take several minutes. Keep this screen open.";
-      const opciones = { chunk_length_s: 30, stride_length_s: 5, return_timestamps: true, task: "transcribe", no_repeat_ngram_size: 5 };
+      estado.textContent = "Transcribing… 0%";
+      barra.hidden = false; barra.value = 0;
+      const opciones = { return_timestamps: true, task: "transcribe", no_repeat_ngram_size: 5 };
       if (orig !== "auto") opciones.language = IDIOMAS[orig];
-      const sal = await asr(audio, opciones);
-      await asr.dispose();
-
+      const SR = 16000, TROZO = 30 * SR;
       segmentos = [];
-      (sal.chunks || []).forEach((c) => {
-        const t = c.text.trim(), ini = c.timestamp[0] ?? 0;
-        if (t && (!segmentos.length || segmentos[segmentos.length - 1].texto !== t))
-          segmentos.push({ ini, fin: c.timestamp[1] ?? ini + 3, texto: t });
-      });
+      for (let desdeM = 0; desdeM < audio.length; ) {
+        let hastaM = Math.min(audio.length, desdeM + TROZO);
+        if (hastaM < audio.length) hastaM = puntoSilencio(audio, hastaM - 4 * SR, hastaM);
+        if (hastaM - desdeM < SR / 2) break;
+        const base = desdeM / SR;
+        const sal = await asr(audio.subarray(desdeM, hastaM), opciones);
+        const cs = sal.chunks && sal.chunks.length ? sal.chunks : [{ text: sal.text || "", timestamp: [0, (hastaM - desdeM) / SR] }];
+        cs.forEach((c) => {
+          const t = c.text.trim(), a = (c.timestamp[0] ?? 0) + base;
+          if (t && (!segmentos.length || segmentos[segmentos.length - 1].texto !== t))
+            segmentos.push({ ini: a, fin: (c.timestamp[1] ?? (c.timestamp[0] ?? 0) + 3) + base, texto: t });
+        });
+        desdeM = hastaM;
+        const pct = Math.round((desdeM / audio.length) * 100);
+        barra.value = pct; estado.textContent = "Transcribing… " + pct + "%";
+      }
+      await asr.dispose();
 
       let aviso = "";
       if (orig === "auto") orig = detectar(segmentos.map((s) => s.texto));
@@ -353,7 +372,7 @@
           const tr = await pipeline("translation", PARES[a + "-" + b], { progress_callback: progreso });
           const nuevos = [];
           for (let i = 0; i < textos.length; i++) {
-            estado.textContent = "Translating " + (i + 1) + " of " + textos.length + " (" + a + " → " + b + ")…";
+            const pct = Math.round(((i + 1) / textos.length) * 100); estado.textContent = "Translating… " + pct + "% (" + (i + 1) + " of " + textos.length + ", " + a + " → " + b + ")";
             barra.hidden = false; barra.value = Math.round(((i + 1) / textos.length) * 100);
             nuevos.push((await tr(textos[i], { max_new_tokens: 200 }))[0].translation_text);
           }
@@ -495,6 +514,23 @@
       if (!v.ended && grab.state !== "inactive") requestAnimationFrame(pintar);
     };
     pintar();
+  });
+
+  // Cut the audio at the quietest moment of the last 4 seconds, so words are not split in half.
+  function puntoSilencio(a, desde, hasta) {
+    const V = 3200;
+    let mejor = hasta, minimo = Infinity;
+    for (let i = desde; i + V <= hasta; i += 1600) {
+      let e = 0;
+      for (let j = i; j < i + V; j += 8) e += a[j] * a[j];
+      if (e < minimo) { minimo = e; mejor = i + V / 2; }
+    }
+    return Math.floor(mejor);
+  }
+
+  $("dondeBtn").addEventListener("click", () => {
+    const i = $("dondeInfo"); i.hidden = !i.hidden;
+    $("dondeBtn").setAttribute("aria-expanded", String(!i.hidden));
   });
 
   function activarGuardar(on) {
