@@ -68,6 +68,9 @@
   .ctl input[type=range] { width: 100%; accent-color: var(--accent); }
   .ctl input[type=color] { width: 100%; height: 2.2rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 2px; }
   .ctl .chk { flex-direction: row; align-items: center; gap: .5rem; }
+  .sws { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; margin-top: .4rem; }
+  .sw { width: 2.2rem; height: 2.2rem; border-radius: 50%; border: 2px solid var(--line); padding: 0; cursor: pointer; }
+  .sws input[type=color] { width: 2.6rem; height: 2.2rem; }
   .prim { width: 100%; font: inherit; font-weight: 700; border: 0; border-radius: 10px; padding: .9rem; margin-top: .9rem;
           background: var(--accent); color: #07101a; cursor: pointer; }
   .prim:disabled { background: var(--off); color: var(--off-ink); cursor: default; }
@@ -144,12 +147,22 @@
     <p class="nota" style="margin-top:.9rem">Subtitle style</p>
     <div class="ctl">
       <label>Size <input id="tam" type="range" min="3" max="12" step="0.5" value="6"></label>
-      <label>Position (top to bottom) <input id="pos" type="range" min="8" max="94" value="86"></label>
-      <label>Color <input id="color" type="color" value="#ffffff"></label>
-      <label class="chk"><input id="fondo" type="checkbox" checked> Dark background</label>
+      <label>Height (low → high) <input id="pos" type="range" min="6" max="92" value="14"></label>
+      <div style="grid-column:1/-1">Text color
+        <div class="sws">
+          <button type="button" class="sw" data-c="#ffffff" style="background:#ffffff" aria-label="White"></button>
+          <button type="button" class="sw" data-c="#ffd60a" style="background:#ffd60a" aria-label="Yellow"></button>
+          <button type="button" class="sw" data-c="#64d2ff" style="background:#64d2ff" aria-label="Light blue"></button>
+          <button type="button" class="sw" data-c="#30d158" style="background:#30d158" aria-label="Green"></button>
+          <button type="button" class="sw" data-c="#ff9f0a" style="background:#ff9f0a" aria-label="Orange"></button>
+          <button type="button" class="sw" data-c="#ff6b9d" style="background:#ff6b9d" aria-label="Pink"></button>
+          <input id="color" type="color" value="#ffffff" aria-label="Custom color">
+        </div>
+      </div>
+      <label class="chk" style="grid-column:1/-1"><input id="fondo" type="checkbox" checked> Dark background behind text</label>
     </div>
-    <button id="grabar" class="prim">Download video with subtitles</button>
-    <button id="guardar" class="prim" hidden>Save video</button>
+    <button id="grabar" class="prim">Step 1: Create video with subtitles</button>
+    <button id="guardar" class="prim" disabled>Step 2: Save video</button>
     <div class="botones">
       <button id="srt">Download subtitles (.srt)</button>
       <button id="copiar">Copy text</button>
@@ -224,7 +237,7 @@
     urlVideo = URL.createObjectURL(archivo);
     const rep = $("reproductor");
     rep.innerHTML = ""; rep.src = urlVideo;
-    $("guardar").hidden = true;
+    $("guardar").disabled = true;
 
     const lista = $("lista");
     lista.innerHTML = "";
@@ -325,7 +338,7 @@
   });
   // ---- Subtitle style, live overlay and video export ----
   const rep = $("reproductor"), capa = $("sub");
-  const estilo = () => ({ tam: +$("tam").value / 100, pos: +$("pos").value / 100,
+  const estilo = () => ({ tam: +$("tam").value / 100, pos: 1 - +$("pos").value / 100,
                           color: $("color").value, fondo: $("fondo").checked });
   const textoEn = (t) => { const s = segmentos.find((x) => t >= x.ini && t < x.fin); return s ? texto(s) : ""; };
 
@@ -377,7 +390,7 @@
     if (!window.MediaRecorder || !segmentos.length) {
       estado.textContent = "This browser can't record video. Update Safari and try again."; return;
     }
-    const btn = $("grabar"); btn.disabled = true; $("guardar").hidden = true; listo = null;
+    const btn = $("grabar"); btn.disabled = true; $("guardar").disabled = true; listo = null;
     rep.pause();
     const e = estilo();
     const esc = Math.min(1, 1280 / Math.max(rep.videoWidth, rep.videoHeight));
@@ -408,8 +421,8 @@
       if (error) { estado.textContent = "Something went wrong: " + error; return; }
       const ext = (grab.mimeType || tipo).includes("mp4") ? "mp4" : "webm";
       listo = new File(trozos, "video-with-subtitles." + ext, { type: "video/" + ext });
-      $("guardar").hidden = false;
-      estado.textContent = "Your video is ready. Tap Save video.";
+      $("guardar").disabled = false;
+      estado.textContent = "Your video is ready. Now tap Step 2: Save video.";
     };
     grab.onstop = () => terminar(null);
     v.onerror = () => { if (grab.state !== "inactive") grab.stop(); terminar("couldn't read the video"); };
@@ -429,14 +442,31 @@
     pintar();
   });
 
-  $("guardar").addEventListener("click", async () => {
-    if (!listo) return;
-    try {
-      if (navigator.canShare && navigator.canShare({ files: [listo] })) { await navigator.share({ files: [listo] }); return; }
-    } catch (err) { if (err.name === "AbortError") return; }
+  function descargar() {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(listo); a.download = listo.name; a.click();
+    estado.textContent = "Downloaded. Open the Files app and look in Downloads.";
+  }
+
+  $("guardar").addEventListener("click", async () => {
+    if (!listo) return;
+    if (navigator.canShare && navigator.canShare({ files: [listo] })) {
+      estado.textContent = "In the menu that opens, choose Save Video (goes to Photos) or Save to Files (you pick the folder).";
+      try {
+        await navigator.share({ files: [listo] });
+        estado.textContent = "Done. Check Photos, or the folder you chose in Files.";
+      } catch (err) {
+        if (err.name === "AbortError") { estado.textContent = "Saving was cancelled. Tap Step 2 to try again."; return; }
+        estado.textContent = "The share menu failed (" + err.name + "). Downloading instead…";
+        descargar();
+      }
+      return;
+    }
+    descargar();
   });
+
+  document.querySelectorAll(".sw").forEach((b) =>
+    b.addEventListener("click", () => { $("color").value = b.dataset.c; }));
 </script>
 </body>
 </html>
