@@ -211,7 +211,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v16</span>
+  <span>Open source · Runs on your device · v17</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -219,6 +219,16 @@
   const aviso = (m) => { const a = document.getElementById("aviso"); a.textContent = m; a.hidden = false; };
   window.addEventListener("error", (e) => aviso("Error: " + e.message));
   window.addEventListener("unhandledrejection", (e) => aviso("Error: " + ((e.reason && e.reason.message) || e.reason)));
+  const paso = (p) => {
+    try { if (p) sessionStorage.setItem("lingua-paso", p); else sessionStorage.removeItem("lingua-paso"); } catch (e) {}
+  };
+  try {
+    const quedo = sessionStorage.getItem("lingua-paso");
+    if (quedo) {
+      sessionStorage.removeItem("lingua-paso");
+      aviso("The iPhone closed this page while it was " + quedo + ". It ran out of memory. Close other apps and Safari tabs, then pick the video again.");
+    }
+  } catch (e) {}
   let pipeline, env;
   try {
     ({ pipeline, env } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2"));
@@ -313,8 +323,9 @@
   async function audioDelArchivo(archivo) {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     const ctx = new Ctx({ sampleRate: 16000 });
-    const buffer = await ctx.decodeAudioData(await archivo.arrayBuffer());
-    const canal = buffer.getChannelData(0);
+    let buffer = await ctx.decodeAudioData(await archivo.arrayBuffer());
+    const canal = new Float32Array(buffer.getChannelData(0));   // own copy, so the decoded buffer can be freed
+    buffer = null;
     await ctx.close();
     return canal;
   }
@@ -370,12 +381,15 @@
     if (orig !== "auto" && !ruta(orig, dest)) { estado.textContent = "There is no translation model for that pair yet."; return; }
     ir.disabled = true; $("salida").style.display = "none"; $("zonaTop").append(estado, barra);
     try {
-      etiqueta = "Downloading the speech model (first time only)…";
-      const asr = await pipeline("automatic-speech-recognition", "Xenova/whisper-base", { progress_callback: progreso });
-      barra.hidden = true;
+      paso("reading the audio of the video");
       estado.textContent = "Extracting audio…";
       const audio = await audioDelArchivo(archivo);
       const durVideo = await duracionVideo(archivo), leido = audio.length / 16000;
+      paso("loading the speech model");
+      etiqueta = "Downloading the speech model (first time only)…";
+      const asr = await pipeline("automatic-speech-recognition", "Xenova/whisper-base", { progress_callback: progreso });
+      barra.hidden = true;
+      paso("transcribing");
       estado.textContent = "Transcribing… 0%";
       barra.hidden = false; barra.value = 0;
       const base0 = { return_timestamps: true, task: "transcribe" };
@@ -439,6 +453,7 @@
       if (!orig) aviso += " Couldn't tell the language, so there is no translation. Pick the video language and try again.";
       else if (!camino) aviso += " There is no translation model for that pair yet.";
       else if (camino.length) {
+        paso("translating");
         let textos = segmentos.map((s) => s.texto), fallos = 0;
         for (const [a, b] of camino) {
           const def = PARES[a + "-" + b], id = typeof def === "string" ? def : def.id, pre = typeof def === "string" ? "" : def.pre;
@@ -472,6 +487,7 @@
       barra.hidden = true;
       estado.textContent = "Something went wrong: " + e.message;
     } finally {
+      paso(null);
       ir.disabled = !video.files[0];
     }
   });
@@ -547,7 +563,7 @@
     if (!window.MediaRecorder || !segmentos.length) {
       estado.textContent = "This browser can't record video. Update Safari and try again."; return;
     }
-    const btn = $("grabar"); btn.disabled = true; activarGuardar(false); listo = null;
+    const btn = $("grabar"); btn.disabled = true; activarGuardar(false); listo = null; paso("recording the video with subtitles");
     rep.pause();
     const e = estilo();
     const esc = Math.min(1, 1280 / Math.max(rep.videoWidth, rep.videoHeight));
@@ -574,7 +590,7 @@
     grab.ondataavailable = (ev) => { if (ev.data.size) trozos.push(ev.data); };
 
     const terminar = (error) => {
-      v.remove(); ac.close(); barra.hidden = true; btn.disabled = false;
+      v.remove(); ac.close(); barra.hidden = true; btn.disabled = false; paso(null);
       if (error) { estado.textContent = "Something went wrong: " + error; return; }
       const ext = (grab.mimeType || tipo).includes("mp4") ? "mp4" : "webm";
       listo = new File(trozos, "video-with-subtitles." + ext, { type: "video/" + ext });
