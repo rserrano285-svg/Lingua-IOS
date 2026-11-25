@@ -15,6 +15,8 @@ La versión de escritorio (Windows, con Whisper y Argos) vive en **otro proyecto
 
 ## Estructura
 - `index.html`: toda la app (HTML, CSS y JavaScript en un solo archivo).
+- `manifest.webmanifest`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`: nombre e ícono (L azul) para la pantalla de inicio.
+- `alternativo/apple-touch-icon.png`: ícono alterno (cuadro azul con L oscura). Para usarlo, copiarlo a la raíz reemplazando el otro.
 - `README.md`: este archivo.
 
 ## Publicar (GitHub Pages)
@@ -31,4 +33,4 @@ Para ver un cambio nuevo sin que Safari use lo guardado, agrega `?v=NUMERO` al f
 - Pendiente: que los subtítulos no se corten a la mitad en videos de más de un minuto (se revisa con el renglón "Details" que aparece al terminar).
 
 ## Versión
-v18
+v19
