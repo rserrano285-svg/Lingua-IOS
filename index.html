@@ -195,11 +195,8 @@
     <button id="grabar" class="prim">Step 1: Create video with subtitles</button>
     <video id="final" controls playsinline hidden style="margin-top:.9rem;width:100%;border-radius:12px;background:#000"></video>
     <p class="nota" style="margin-top:.9rem">Step 2: choose where to save the finished video</p>
-    <button id="aFotos" class="prim" disabled>Save to Photos</button>
-    <p class="nota">Goes to the Photos app (Fototeca), in Recents. In the menu that opens, tap <b>Save Video</b>.</p>
-    <button id="aArchivos" class="prim" disabled>Save to Files</button>
-    <p class="nota">Goes to the Files app (Archivos), in the folder you choose. In the menu that opens, tap <b>Save to Files</b>, pick a folder and tap Save.</p>
-    <p class="nota">The iPhone menu also lists apps like WhatsApp. Apple doesn't let a web page hide them, so just ignore them and pick <b>Save Video</b> or <b>Save to Files</b>.</p>
+    <button id="aGuardar" class="prim" disabled>Save video</button>
+    <p class="nota">The iPhone will ask where to put it: tap <b>Save Video</b> for Photos, or <b>Save to Files</b> to pick a folder. Ignore the other apps in the list.</p>
     <div id="resumen" class="nota" hidden style="color:var(--ink)"></div>
     <div id="zonaMsg"></div>
     <div class="botones">
@@ -211,7 +208,7 @@
 </main>
 
 <footer>
-  <span>Open source · Runs on your device · v17</span>
+  <span>Open source · Runs on your device · v18</span>
   <span>Speech recognition: Whisper · Translation: Opus-MT</span>
 </footer>
 
@@ -222,11 +219,40 @@
   const paso = (p) => {
     try { if (p) sessionStorage.setItem("lingua-paso", p); else sessionStorage.removeItem("lingua-paso"); } catch (e) {}
   };
+  const BD = () => new Promise((ok, mal) => {
+    const r = indexedDB.open("lingua", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("v");
+    r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error);
+  });
+  const guardarVideo = async (f) => {
+    try {
+      const db = await BD();
+      await new Promise((ok) => { const t = db.transaction("v", "readwrite"); t.objectStore("v").put(f, "video"); t.oncomplete = ok; t.onerror = ok; t.onabort = ok; });
+    } catch (e) {}
+  };
+  const leerVideo = async () => {
+    try {
+      const db = await BD();
+      return await new Promise((ok) => { const q = db.transaction("v").objectStore("v").get("video"); q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); });
+    } catch (e) { return null; }
+  };
+  const intentos = () => { try { return +sessionStorage.getItem("lingua-intentos") || 0; } catch (e) { return 0; } };
+  const MAX_INTENTOS = 4;
+  let reintentar = null;   // set when the iPhone closed the page in the middle of a run
   try {
     const quedo = sessionStorage.getItem("lingua-paso");
     if (quedo) {
       sessionStorage.removeItem("lingua-paso");
-      aviso("The iPhone closed this page while it was " + quedo + ". It ran out of memory. Close other apps and Safari tabs, then pick the video again.");
+      const n = intentos();
+      if (n < MAX_INTENTOS && !quedo.startsWith("recording")) {
+        reintentar = { auto: true };
+        aviso("The iPhone closed this page while it was " + quedo + " (low memory). Trying again by itself, attempt " + (n + 1) + " of " + MAX_INTENTOS + "…");
+      } else {
+        reintentar = { auto: false };
+        aviso("The iPhone closed this page while it was " + quedo + " (low memory). " +
+          (n >= MAX_INTENTOS ? "It happened " + n + " times in a row. " : "") +
+          "Close other apps and Safari tabs, then tap the button to try again. Your video is already loaded.");
+      }
     }
   } catch (e) {}
   let pipeline, env;
@@ -260,13 +286,15 @@
     nl: "de het een en van dat is op te voor met niet".split(" "),
     sv: "och att det som en är på av för med inte jag".split(" "),
   };
-  let etiqueta = "", segmentos = [], urlVideo = null;
+  let etiqueta = "", segmentos = [], urlVideo = null, restaurado = null;
 
   function progreso(p) {
     if (p.status === "progress" && p.total) {
       barra.hidden = false;
       barra.value = Math.round((p.loaded / p.total) * 100);
       estado.textContent = etiqueta + " " + barra.value + "%";
+    } else if (p.status === "done") {
+      estado.textContent = "Starting the model… keep this screen open.";
     }
   }
 
@@ -359,6 +387,8 @@
   }
 
   function archivoElegido() {
+    restaurado = null;
+    try { sessionStorage.removeItem("lingua-intentos"); } catch (e) {}
     const f = video.files[0];
     $("nombre").textContent = f ? f.name + " · " + (f.size / 1048576).toFixed(1) + " MB" : "";
     if (!f) $("nombre").innerHTML = "Drop a video here or <u>browse files</u>";
@@ -373,21 +403,23 @@
   });
 
   ir.addEventListener("click", async () => {
-    const archivo = video.files[0];
+    const archivo = video.files[0] || restaurado;
     if (!archivo) return;
     if (!pipeline) { aviso("The engine did not load, so nothing can run. Reload the page with a good internet connection."); return; }
     const dest = $("destino").value;
     let orig = $("origen").value;
     if (orig !== "auto" && !ruta(orig, dest)) { estado.textContent = "There is no translation model for that pair yet."; return; }
     ir.disabled = true; $("salida").style.display = "none"; $("zonaTop").append(estado, barra);
+    try { sessionStorage.setItem("lingua-intentos", String(intentos() + 1)); } catch (e) {}
+    if (!restaurado) await guardarVideo(archivo);
     try {
       paso("reading the audio of the video");
       estado.textContent = "Extracting audio…";
       const audio = await audioDelArchivo(archivo);
       const durVideo = await duracionVideo(archivo), leido = audio.length / 16000;
       paso("loading the speech model");
-      etiqueta = "Downloading the speech model (first time only)…";
-      const asr = await pipeline("automatic-speech-recognition", "Xenova/whisper-base", { progress_callback: progreso });
+      etiqueta = "Loading the speech model (it downloads only the first time)…";
+      const asr = await pipeline("automatic-speech-recognition", "Xenova/whisper-base", { progress_callback: progreso, dtype: { encoder_model: "q8", decoder_model_merged: "q8" } });
       barra.hidden = true;
       paso("transcribing");
       estado.textContent = "Transcribing… 0%";
@@ -458,7 +490,7 @@
         for (const [a, b] of camino) {
           const def = PARES[a + "-" + b], id = typeof def === "string" ? def : def.id, pre = typeof def === "string" ? "" : def.pre;
           const sep = b === "zh" || b === "ja" ? "" : " ";
-          etiqueta = "Downloading translation model " + a + " → " + b + "…";
+          etiqueta = "Loading translation model " + a + " → " + b + "…";
           const tr = await pipeline("translation", id, { progress_callback: progreso });
           const nuevos = [];
           for (let i = 0; i < textos.length; i++) {
@@ -481,6 +513,7 @@
         if (fallos) aviso += " " + fallos + " phrase(s) couldn't be translated and stay in the original language.";
       }
       barra.hidden = true;
+      document.getElementById("aviso").hidden = true;
       mostrar(archivo);
       estado.textContent = "Done. Press play to see the subtitles." + aviso + detalle;
     } catch (e) {
@@ -488,7 +521,8 @@
       estado.textContent = "Something went wrong: " + e.message;
     } finally {
       paso(null);
-      ir.disabled = !video.files[0];
+      try { sessionStorage.removeItem("lingua-intentos"); } catch (e) {}
+      ir.disabled = !(video.files[0] || restaurado);
     }
   });
 
@@ -640,7 +674,7 @@
   }
 
   function activarGuardar(on) {
-    $("aFotos").disabled = !on; $("aArchivos").disabled = !on;
+    $("aGuardar").disabled = !on;
     if (!on) { $("final").hidden = true; $("resumen").hidden = true; }
   }
 
@@ -658,7 +692,7 @@
   // Both buttons open the iPhone save menu (the only way a web page can reach Photos or a Files folder).
   async function guardar(antes, despues, destino) {
     if (!listo) return;
-    const botones = [$("aFotos"), $("aArchivos")];
+    const botones = [$("aGuardar")];
     botones.forEach((b) => (b.disabled = true));
     barra.hidden = false; barra.removeAttribute("value");   // moving bar while the menu opens
     try {
@@ -683,14 +717,10 @@
       botones.forEach((b) => (b.disabled = false));
     }
   }
-  $("aFotos").addEventListener("click", () => guardar(
-    "Opening the iPhone menu… tap Save Video. If you don't see it, swipe along the row of actions.",
-    "Menu closed. If you tapped Save Video, open the Photos app and look in Recents.",
-    "Photos app (Fototeca), in Recents"));
-  $("aArchivos").addEventListener("click", () => guardar(
-    "Opening the iPhone menu… scroll down and tap Save to Files, pick a folder and tap Save.",
-    "Menu closed. If you tapped Save to Files, open the Files app and look in the folder you picked, or tap Recents and search for " + (listo ? listo.name : "video-with-subtitles") + ".",
-    "Files app (Archivos), in the folder you picked (also under Recents)"));
+  $("aGuardar").addEventListener("click", () => guardar(
+    "Opening the iPhone menu… tap Save Video (Photos) or Save to Files (pick a folder).",
+    "Menu closed. If you tapped Save Video, look in Photos (Recents). If you tapped Save to Files, look in the folder you picked, or in Files, Recents.",
+    "Photos (Recents) or the Files folder you picked"));
 
   function enlazar(r, n) {
     r.addEventListener("input", () => { n.value = r.value; });
@@ -727,6 +757,19 @@
     });
     hex.addEventListener("change", () => { hex.value = pick.value; });
   });
+
+  // After a crash: put the saved video back and, if allowed, start again by itself.
+  if (reintentar) {
+    (async () => {
+      const f = await leerVideo();
+      if (!f) { aviso("The iPhone closed this page and the video could not be kept. Please pick the video again."); return; }
+      restaurado = f;
+      try { const dt = new DataTransfer(); dt.items.add(new File([f], f.name, { type: f.type })); video.files = dt.files; } catch (e) {}
+      $("nombre").textContent = f.name + " · " + (f.size / 1048576).toFixed(1) + " MB";
+      ir.disabled = false;
+      if (reintentar.auto && pipeline) setTimeout(() => ir.click(), 800);
+    })();
+  }
 </script>
 </body>
 </html>
