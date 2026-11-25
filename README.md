@@ -11,6 +11,7 @@ La versión de escritorio (Windows, con Whisper y Argos) vive en **otro proyecto
 - Subtítulos con tamaño, altura, color de texto, color y opacidad del fondo.
 - Graba un video nuevo con los subtítulos puestos (en tiempo real) y lo guarda en Fotos o en Archivos desde el menú del iPhone.
 - Baja los subtítulos en `.srt`.
+- Si el iPhone cierra la página por falta de memoria, la página guarda el video en el teléfono (IndexedDB) y reintenta sola, hasta 4 veces.
 
 ## Estructura
 - `index.html`: toda la app (HTML, CSS y JavaScript en un solo archivo).
@@ -30,4 +31,4 @@ Para ver un cambio nuevo sin que Safari use lo guardado, agrega `?v=NUMERO` al f
 - Pendiente: que los subtítulos no se corten a la mitad en videos de más de un minuto (se revisa con el renglón "Details" que aparece al terminar).
 
 ## Versión
-v16
+v18
