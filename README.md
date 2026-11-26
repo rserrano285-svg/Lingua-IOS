@@ -34,3 +34,8 @@ Para ver un cambio nuevo sin que Safari use lo guardado, agrega `?v=NUMERO` al f
 
 ## Versión
 v19
+
+
+## Apoyo
+
+Lingua IOS es gratuita y de código abierto. Si te sirve, puedes apoyar el desarrollo con una donación voluntaria: [PayPal (rene285serrano)](https://paypal.me/rene285serrano). Cualquier ayuda cuenta.
