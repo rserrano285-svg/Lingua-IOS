@@ -1,4 +1,4 @@
-# lingua · versión iPhone
+# Lingua IOS — versión iPhone
 
 Página web que transcribe un video con Whisper, lo traduce y le pone subtítulos, todo dentro del navegador del iPhone (Safari). No usa servidor ni laptop: el video no sale del teléfono.
 

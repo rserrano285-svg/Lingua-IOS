@@ -1,6 +1,6 @@
 {
-  "name": "lingua",
-  "short_name": "lingua",
+  "name": "Lingua IOS",
+  "short_name": "Lingua IOS",
   "description": "Translate your video with subtitles, on your device",
   "start_url": "./",
   "scope": "./",
