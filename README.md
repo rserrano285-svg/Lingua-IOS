@@ -17,9 +17,9 @@ Tamaño, altura, color de texto, color y opacidad del fondo. Se puede descargar 
 
 ## Versión y acceso
 
-Versión actual: **V2** — https://rserrano285-svg.github.io/Lingua-IOS/V2/
+Versión actual: **V3** — https://rserrano285-svg.github.io/Lingua-IOS/V3/
 
-La URL raíz redirige a V2. Convención **RS App**: cada versión vive en su carpeta (`V1`, `V2`, ...). Las rutas antiguas `/V18/` y `/V19/` redirigen a V1.
+La URL raíz redirige a V2. Convención RS App: cada versión vive en su carpeta (`V1`, `V2`, `V3`, ...); la raíz redirige a la última. Las rutas `/V2/` y antiguas redirigen a V3.
 
 Para instalarla: abre la URL en Safari → *Compartir → Agregar a pantalla de inicio*.
 
