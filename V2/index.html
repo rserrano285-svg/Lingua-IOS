@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lingua IOS · RS App</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0d131b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lingua IOS <span class="brand-tag">RS App</span>">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d131b; --panel: #151d27; --line: #26313f; --ink: #e6edf5; --muted: #8b99aa;
+    --accent: #5aa2ff; --eyebrow: #4a90f5; --badge-bg: #16304f; --off: #9aa6b3; --off-ink: #2a3441;
+  }
+  * { box-sizing: border-box; }
+  html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .top { display: flex; align-items: center; gap: .6rem; padding: .8rem 1.1rem; border-bottom: 1px solid var(--line); }
+  .logo img{width:100%;height:100%;object-fit:contain}
+    .logo { width: 1.8rem; height: 1.8rem; border-radius: 8px; background: var(--accent); color: #07101a;
+          display: grid; place-items: center; font-weight: 800; }
+  .top b { font-size: 1.05rem; }
+  .top span { margin-left: auto; font-size: .75rem; color: var(--muted); }
+  .dot { display: inline-block; width: .45rem; height: .45rem; border-radius: 50%; background: #3ecf8e; margin-right: .35rem; }
+  main { max-width: 40rem; margin: 0 auto; padding: 2rem 1.1rem 2rem; }
+  .eyebrow { font-size: .68rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--eyebrow); }
+  h1 { font: 800 clamp(2.5rem, 12vw, 3.8rem)/.98 "Bricolage Grotesque", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+       letter-spacing: -.04em; color: var(--accent); margin: .7rem 0 1rem; }
+  .lead { color: #aab6c5; margin: 0 0 1.6rem; max-width: 26rem; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 1.2rem; }
+  .cab { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+  .cab .n { color: var(--muted); font-size: .75rem; font-weight: 700; }
+  .cab h2 { font-size: 1rem; margin: 0; }
+  .cab .der { margin-left: auto; font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: right; }
+  .badge { background: var(--badge-bg); color: var(--accent); padding: .3rem .55rem; border-radius: 6px; }
+  label.t { display: block; font-size: .78rem; color: var(--muted); margin: .9rem 0 .35rem; }
+  select { width: 100%; font: inherit; font-weight: 600; color: var(--ink); background: var(--bg);
+           border: 1px solid var(--line); border-radius: 10px; padding: .8rem; }
+  .nota { font-size: .72rem; color: var(--muted); margin: .45rem 0 0; }
+  .fila { display: grid; grid-template-columns: 1fr auto 1fr; gap: .6rem; align-items: end; }
+  .fila .flecha { color: var(--muted); padding-bottom: .8rem; }
+  .fila label.t { margin-top: .9rem; }
+  .drop { display: block; border: 1.5px dashed #2c3a4b; border-radius: 14px; padding: 1.8rem 1rem; text-align: center; cursor: pointer; }
+  .drop.sobre { border-color: var(--accent); }
+  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .drop:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .ico { width: 2.2rem; height: 2.2rem; border: 1px solid var(--line); border-radius: 8px; margin: 0 auto .7rem;
+         display: grid; place-items: center; color: var(--accent); }
+  .drop b { display: block; font-size: .85rem; }
+  .drop b u { color: var(--accent); text-decoration: none; }
+  .drop small { display: block; color: var(--muted); font-size: .7rem; margin-top: .3rem; }
+  #ir { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 1rem;
+        font: inherit; font-weight: 700; border: 0; border-radius: 10px; padding: .95rem 1.1rem;
+        background: var(--accent); color: #07101a; cursor: pointer; }
+  #ir:disabled { background: var(--off); color: var(--off-ink); cursor: default; }
+  #estado { margin: 1rem 0 .4rem; color: var(--muted); min-height: 1.4em; }
+  progress { width: 100%; height: .9rem; accent-color: var(--accent); }
+  #salida { display: none; margin-top: 1.2rem; }
+  [hidden] { display: none !important; }
+  .visor { position: relative; width: fit-content; max-width: 100%; margin: 0 auto; }
+  video { display: block; width: auto; max-width: 100%; max-height: 60vh; border-radius: 12px; background: #000; }
+  .sub { position: absolute; left: 50%; transform: translate(-50%, -50%); width: max-content; max-width: 92%;
+         padding: .1em .4em; text-align: center; font-weight: 700; line-height: 1.2; pointer-events: none;
+         font-family: -apple-system, Helvetica, Arial, sans-serif; }
+  .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem .9rem; margin-top: .9rem; font-size: .78rem; color: var(--muted); }
+  .ctl label { display: flex; flex-direction: column; gap: .3rem; }
+  .ctl input[type=range] { width: 100%; accent-color: var(--accent); }
+  .ctl input[type=color] { width: 100%; height: 2.2rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 2px; }
+  .ctl .chk { flex-direction: row; align-items: center; gap: .5rem; }
+  .sws { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; margin-top: .4rem; }
+  .sw { width: 2.2rem; height: 2.2rem; border-radius: 50%; border: 2px solid var(--line); padding: 0; cursor: pointer; }
+  .sws input[type=color] { width: 2.6rem; height: 2.2rem; }
+  .par { display: flex; gap: .6rem; align-items: center; }
+  .par input[type=range] { flex: 1; min-width: 0; }
+  .par input[type=number], .sws input[type=text] { font: inherit; color: var(--ink); background: var(--bg);
+        border: 1px solid var(--line); border-radius: 8px; padding: .45rem; text-align: center; }
+  .par input[type=number] { width: 4.4rem; }
+  .mm { width: 2.4rem; height: 2.4rem; flex: none; border-radius: 10px; border: 1px solid var(--line);
+        background: var(--bg); color: var(--ink); font-size: 1.3rem; line-height: 1; padding: 0; cursor: pointer; }
+  .botones .prim { margin-top: 0; }
+  .sec { width: 100%; font: inherit; font-weight: 600; color: var(--ink); background: transparent;
+         border: 1px solid var(--line); border-radius: 10px; padding: .7rem; margin-top: .6rem; cursor: pointer; }
+  #dondeInfo { margin-top: .6rem; line-height: 1.6; }
+  #zonaMsg { margin-top: .9rem; }
+  #zonaMsg #estado { color: var(--ink); background: var(--bg); border: 1px solid var(--accent); border-radius: 10px;
+                     padding: .7rem .8rem; min-height: 0; margin: 0 0 .6rem; }
+  #zonaMsg #estado:empty { display: none; }
+  #abrirFiles { display: inline-block; margin: .2rem 0 .8rem; color: var(--accent); }
+  .sws input[type=text] { width: 6.2rem; }
+  .prim { width: 100%; font: inherit; font-weight: 700; border: 0; border-radius: 10px; padding: .9rem; margin-top: .9rem;
+          background: var(--accent); color: #07101a; cursor: pointer; }
+  .prim:disabled { background: var(--off); color: var(--off-ink); cursor: default; }
+  .botones { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin: .9rem 0; }
+  .botones button { font: inherit; font-weight: 600; color: var(--ink); background: transparent;
+                    border: 1px solid var(--line); border-radius: 10px; padding: .75rem .5rem; cursor: pointer; }
+  ol { list-style: none; margin: 0; padding: 0; }
+  li { padding: .6rem 0; border-top: 1px solid var(--line); }
+  li button { all: unset; cursor: pointer; color: var(--accent); font-variant-numeric: tabular-nums; margin-right: .5rem; }
+  li small { display: block; color: var(--muted); }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  footer { max-width: 40rem; margin: 0 auto; padding: 0 1.1rem 2rem; display: flex; flex-wrap: wrap; gap: .4rem 1rem;
+           justify-content: space-between; font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .brand-tag{font-size:.66rem;font-weight:800;color:var(--accent);background:rgba(59,130,246,.14);border:1px solid rgba(96,165,250,.35);border-radius:99px;padding:.15rem .5rem}
+  </style>
+</head>
+<body>
+<div class="top">
+  <span class="logo"><img src="icon.svg" alt=""></span><b>Lingua IOS <span class="brand-tag">RS App</span></b>
+  <span><i class="dot"></i>Your videos stay on this device</span>
+</div>
+
+<div id="aviso" role="alert" hidden style="margin:1rem 1.1rem 0;padding:.8rem 1rem;border:1px solid #7a2e2e;background:#2a1517;color:#ffb4b4;border-radius:10px;font-size:.85rem"></div>
+
+<main>
+  <div class="eyebrow">Video, understood</div>
+  <h1>Every voice.<br>Every language.</h1>
+  <p class="lead">Translate your video, preview every subtitle, and download the subtitles.</p>
+
+  <section class="card">
+    <div class="cab"><span class="n">01</span><h2>Choose your languages</h2><span class="der badge">Local processing</span></div>
+
+    <label class="t" for="motor">Translation engine</label>
+    <select id="motor">
+      <option value="google" selected>Google Translate · on the internet</option>
+      <option value="opus">Opus-MT · on this device</option>
+    </select>
+    <p class="nota">Google Translate needs internet but does not download translation models. Opus-MT works offline after the first download.</p>
+
+    <div class="fila">
+      <div><label class="t" for="origen">Video language</label>
+        <select id="origen"><option value="auto" selected>Auto-detect</option><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ar">Arabic</option><option value="hi">Hindi</option><option value="nl">Dutch</option><option value="sv">Swedish</option></select></div>
+      <div class="flecha">→</div>
+      <div><label class="t" for="destino">Translate to</label>
+        <select id="destino"><option value="en">English</option><option value="es" selected>Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ru">Russian</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ar">Arabic</option><option value="hi">Hindi</option><option value="nl">Dutch</option><option value="sv">Swedish</option></select></div>
+    </div>
+
+    <p class="nota">Between two languages that are not English, the translation goes through English.</p>
+
+    <div class="cab" style="margin-top:1.6rem"><span class="n">02</span><h2>Add your video</h2><span class="der">MP4, MOV, M4V · up to 8 min</span></div>
+    <label class="drop" id="zona">
+      <input id="video" type="file" accept="video/*,audio/*">
+      <div class="ico">↑</div>
+      <b id="nombre">Drop a video here or <u>browse files</u></b>
+      <small>Your video stays on this device.</small>
+    </label>
+
+    <button id="ir" disabled><span>Translate video</span><span aria-hidden="true">↗</span></button>
+  </section>
+
+  <div id="zonaTop">
+    <div id="estado" role="status"></div>
+    <progress id="barra" value="0" max="100" hidden></progress>
+  </div>
+
+  <section id="salida" class="card">
+    <div class="cab"><span class="n">03</span><h2>Preview</h2></div>
+    <div class="visor">
+      <video id="reproductor" controls playsinline></video>
+      <div id="sub" class="sub" hidden></div>
+    </div>
+    <p class="nota" style="margin-top:.9rem">Subtitle style</p>
+    <div class="ctl">
+      <label style="grid-column:1/-1">Text size (% of the video height)
+        <span class="par"><input id="tam" type="range" min="3" max="12" step="0.5" value="6">
+        <input id="tamN" type="number" min="3" max="12" step="0.5" value="6" inputmode="decimal" aria-label="Text size number"></span></label>
+      <label style="grid-column:1/-1">Height (4 = bottom, 96 = top)
+        <span class="par"><input id="pos" type="range" min="4" max="96" step="1" value="14">
+        <input id="posN" type="number" min="4" max="96" step="1" value="14" inputmode="numeric" aria-label="Height number"></span></label>
+      <div style="grid-column:1/-1">Text color
+        <div class="sws" data-pick="color" data-hex="hex">
+          <button type="button" class="sw" data-c="#ffffff" style="background:#ffffff" aria-label="White"></button>
+          <button type="button" class="sw" data-c="#ffd60a" style="background:#ffd60a" aria-label="Yellow"></button>
+          <button type="button" class="sw" data-c="#64d2ff" style="background:#64d2ff" aria-label="Light blue"></button>
+          <button type="button" class="sw" data-c="#30d158" style="background:#30d158" aria-label="Green"></button>
+          <button type="button" class="sw" data-c="#ff9f0a" style="background:#ff9f0a" aria-label="Orange"></button>
+          <button type="button" class="sw" data-c="#ff6b9d" style="background:#ff6b9d" aria-label="Pink"></button>
+          <input id="color" type="color" value="#ffffff" aria-label="Custom color">
+          <input id="hex" type="text" value="#ffffff" maxlength="7" spellcheck="false" autocapitalize="off" aria-label="Color code">
+        </div>
+      </div>
+      <label class="chk" style="grid-column:1/-1"><input id="fondo" type="checkbox" checked> Show a background behind the text</label>
+      <div style="grid-column:1/-1">Background color
+        <div class="sws" data-pick="bgcolor" data-hex="bghex">
+          <button type="button" class="sw" data-c="#000000" style="background:#000000" aria-label="Black"></button>
+          <button type="button" class="sw" data-c="#333333" style="background:#333333" aria-label="Dark gray"></button>
+          <button type="button" class="sw" data-c="#0a2540" style="background:#0a2540" aria-label="Navy"></button>
+          <button type="button" class="sw" data-c="#8b1e1e" style="background:#8b1e1e" aria-label="Dark red"></button>
+          <button type="button" class="sw" data-c="#ffd60a" style="background:#ffd60a" aria-label="Yellow"></button>
+          <button type="button" class="sw" data-c="#ffffff" style="background:#ffffff" aria-label="White"></button>
+          <input id="bgcolor" type="color" value="#000000" aria-label="Custom background color">
+          <input id="bghex" type="text" value="#000000" maxlength="7" spellcheck="false" autocapitalize="off" aria-label="Background color code">
+        </div>
+      </div>
+      <label style="grid-column:1/-1">Background opacity (%)
+        <span class="par"><input id="opa" type="range" min="10" max="100" step="5" value="60">
+        <input id="opaN" type="number" min="10" max="100" step="5" value="60" inputmode="numeric" aria-label="Background opacity number"></span></label>
+    </div>
+    <button id="grabar" class="prim">Step 1: Create video with subtitles</button>
+    <video id="final" controls playsinline hidden style="margin-top:.9rem;width:100%;border-radius:12px;background:#000"></video>
+    <p class="nota" style="margin-top:.9rem">Step 2: choose where to save the finished video</p>
+    <button id="aGuardar" class="prim" disabled>Save video</button>
+    <p class="nota">The iPhone will ask where to put it: tap <b>Save Video</b> for Photos, or <b>Save to Files</b> to pick a folder. Ignore the other apps in the list.</p>
+    <div id="resumen" class="nota" hidden style="color:var(--ink)"></div>
+    <div id="zonaMsg"></div>
+    <div class="botones">
+      <button id="srt">Download subtitles (.srt)</button>
+      <button id="copiar">Copy text</button>
+    </div>
+    <ol id="lista"></ol>
+  </section>
+</main>
+
+<footer>
+  <span>RS App · Lingua · Open source · Runs on your device · V1</span>
+  <span id="engine-footer">Speech recognition: Whisper · Translation: Google</span>
+  <a href="https://paypal.me/rene285serrano" target="_blank" rel="noopener noreferrer">Donar / Apoyar El Proyecto ♥</a>
+</footer>
+
+<script type="module">
+  const aviso = (m) => { const a = document.getElementById("aviso"); a.textContent = m; a.hidden = false; };
+  window.addEventListener("error", (e) => aviso("Error: " + e.message));
+  window.addEventListener("unhandledrejection", (e) => aviso("Error: " + ((e.reason && e.reason.message) || e.reason)));
+  const paso = (p) => {
+    try { if (p) sessionStorage.setItem("lingua-paso", p); else sessionStorage.removeItem("lingua-paso"); } catch (e) {}
+  };
+  const BD = () => new Promise((ok, mal) => {
+    const r = indexedDB.open("lingua", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("v");
+    r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error);
+  });
+  const guardarVideo = async (f) => {
+    try {
+      const db = await BD();
+      await new Promise((ok) => { const t = db.transaction("v", "readwrite"); t.objectStore("v").put(f, "video"); t.oncomplete = ok; t.onerror = ok; t.onabort = ok; });
+    } catch (e) {}
+  };
+  const leerVideo = async () => {
+    try {
+      const db = await BD();
+      return await new Promise((ok) => { const q = db.transaction("v").objectStore("v").get("video"); q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null); });
+    } catch (e) { return null; }
+  };
+  const intentos = () => { try { return +sessionStorage.getItem("lingua-intentos") || 0; } catch (e) { return 0; } };
+  const MAX_INTENTOS = 4;
+  let reintentar = null;   // set when the iPhone closed the page in the middle of a run
+  try {
+    const quedo = sessionStorage.getItem("lingua-paso");
+    if (quedo) {
+      sessionStorage.removeItem("lingua-paso");
+      const n = intentos();
+      if (n < MAX_INTENTOS && !quedo.startsWith("recording")) {
+        reintentar = { auto: true };
+        aviso("The iPhone closed this page while it was " + quedo + " (low memory). Trying again by itself, attempt " + (n + 1) + " of " + MAX_INTENTOS + "…");
+      } else {
+        reintentar = { auto: false };
+        aviso("The iPhone closed this page while it was " + quedo + " (low memory). " +
+          (n >= MAX_INTENTOS ? "It happened " + n + " times in a row. " : "") +
+          "Close other apps and Safari tabs, then tap the button to try again. Your video is already loaded.");
+      }
+    }
+  } catch (e) {}
+  let pipeline, env;
+  try {
+    ({ pipeline, env } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2"));
+    env.allowLocalModels = false;
+  } catch (e) {
+    aviso("The speech and translation engine did not load (" + e.message + "). Check your internet connection and reload the page.");
+  }
+
+  const $ = (id) => document.getElementById(id);
+  const estado = $("estado"), barra = $("barra"), ir = $("ir"), video = $("video");
+  async function googleTranslate(textos, from, to) {
+    const salidas = [];
+    for (let i = 0; i < textos.length; i += 8) {
+      const lote = textos.slice(i, i + 8);
+      const promesas = lote.map(async (texto) => {
+        const url = "https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=" + encodeURIComponent(from || "auto") +
+          "&tl=" + encodeURIComponent(to) + "&dt=t&q=" + encodeURIComponent(texto);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Google Translate " + res.status);
+        const data = await res.json();
+        let salida = "";
+        if (Array.isArray(data[0])) {
+          salida = typeof data[0][0] === "string" ? data[0][0]
+            : (Array.isArray(data[0][0]) ? data[0][0].map((x) => x[0] || "").join("") : "");
+        } else if (typeof data[0] === "string") salida = data[0];
+        return salida || texto;
+      });
+      salidas.push(...await Promise.all(promesas));
+      const pct = Math.round((i + lote.length) / textos.length * 100);
+      estado.textContent = "Translating with Google... " + pct + "%";
+      barra.hidden = false; barra.value = pct;
+    }
+    return salidas;
+  }
+
+  const IDIOMAS = { en: "english", es: "spanish", fr: "french", de: "german", it: "italian", pt: "portuguese",
+                    ru: "russian", zh: "chinese", ja: "japanese", ar: "arabic", hi: "hindi", nl: "dutch", sv: "swedish" };
+  const M = (p) => "Xenova/opus-mt-" + p;
+  const PARES = {};
+  ["es", "fr", "de", "it", "ru", "hi", "nl", "sv"].forEach((l) => { PARES["en-" + l] = M("en-" + l); PARES[l + "-en"] = M(l + "-en"); });
+  PARES["zh-en"] = M("zh-en"); PARES["ar-en"] = M("ar-en"); PARES["ja-en"] = M("ja-en"); PARES["pt-en"] = M("ROMANCE-en");
+  PARES["en-ja"] = M("en-jap");
+  PARES["en-zh"] = { id: M("en-zh"), pre: ">>cmn_Hans<< " };
+  PARES["en-ar"] = { id: M("en-ar"), pre: ">>ara<< " };
+  PARES["en-pt"] = { id: M("en-ROMANCE"), pre: ">>pt<< " };
+  ["es-fr", "fr-es", "es-de", "de-es", "es-it", "it-es", "es-ru", "ru-es", "fr-de", "de-fr", "fr-ru", "ru-fr"].forEach((x) => (PARES[x] = M(x)));
+  const PALABRAS = {
+    en: "the and is to of that it you in this was for with".split(" "),
+    es: "el la de que y en los un es para una por con se".split(" "),
+    fr: "le la les de et est que un une pas des pour dans".split(" "),
+    de: "der die und das ist nicht ich zu ein mit auf den".split(" "),
+    it: "il lo la di che e un una per con non è sono del della".split(" "),
+    pt: "o a os as de que e um uma para com não é do da em".split(" "),
+    nl: "de het een en van dat is op te voor met niet".split(" "),
+    sv: "och att det som en är på av för med inte jag".split(" "),
+  };
+  let etiqueta = "", segmentos = [], urlVideo = null, restaurado = null;
+
+  function progreso(p) {
+    if (p.status === "progress" && p.total) {
+      barra.hidden = false;
+      barra.value = Math.round((p.loaded / p.total) * 100);
+      estado.textContent = etiqueta + " " + barra.value + "%";
+    } else if (p.status === "done") {
+      estado.textContent = "Starting the model… keep this screen open.";
+    }
+  }
+
+  function detectar(textos) {
+    const t = textos.join(" "), cuenta = (re) => (t.match(re) || []).length;
+    let mejorG = null, maxG = 0;
+    [["ja", /[\u3040-\u30ff]/g], ["zh", /[\u4e00-\u9fff]/g], ["ru", /[\u0400-\u04ff]/g],
+     ["ar", /[\u0600-\u06ff]/g], ["hi", /[\u0900-\u097f]/g]].forEach(([l, re]) => {
+      const n = cuenta(re); if (n > maxG) { maxG = n; mejorG = l; }
+    });
+    if (maxG > 5) return mejorG === "zh" && cuenta(/[\u3040-\u30ff]/g) > 3 ? "ja" : mejorG;
+    const pal = t.toLowerCase().match(/[a-zà-ÿ']+/g) || [];
+    let mejor = null, max = 0;
+    for (const [l, ws] of Object.entries(PALABRAS)) {
+      const set = new Set(ws), n = pal.filter((w) => set.has(w)).length;
+      if (n > max) { max = n; mejor = l; }
+    }
+    return mejor;
+  }
+
+  const ruta = (o, d) => {
+    if (o === d) return [];
+    if (PARES[o + "-" + d]) return [[o, d]];
+    if (PARES[o + "-en"] && PARES["en-" + d]) return [[o, "en"], ["en", d]];
+    return null;
+  };
+
+  // Translation models work best one sentence at a time, so long phrases are split first.
+  function frases(t) {
+    const out = [];
+    for (let p of t.match(/[^.!?。！？…]+[.!?。！？…]*\s*/g) || [t]) {
+      p = p.trim();
+      while (p.length > 220) {
+        let k = p.lastIndexOf(",", 200);
+        if (k < 60) k = p.lastIndexOf(" ", 200);
+        if (k < 60) k = 200;
+        out.push(p.slice(0, k + 1).trim()); p = p.slice(k + 1).trim();
+      }
+      if (p) out.push(p);
+    }
+    return out.length ? out : [t];
+  }
+
+  function duracionVideo(archivo) {
+    return new Promise((ok) => {
+      const v = document.createElement("video"), u = URL.createObjectURL(archivo);
+      const fin = (d) => { URL.revokeObjectURL(u); ok(d); };
+      v.preload = "metadata"; v.onloadedmetadata = () => fin(v.duration); v.onerror = () => fin(NaN);
+      setTimeout(() => fin(NaN), 4000);
+      v.src = u;
+    });
+  }
+
+  async function audioDelArchivo(archivo) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx({ sampleRate: 16000 });
+    let buffer = await ctx.decodeAudioData(await archivo.arrayBuffer());
+    const canal = new Float32Array(buffer.getChannelData(0));   // own copy, so the decoded buffer can be freed
+    buffer = null;
+    await ctx.close();
+    return canal;
+  }
+
+  const dos = (n) => String(n).padStart(2, "0");
+  function tiempo(s, sep) {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = Math.floor(s % 60);
+    return dos(h) + ":" + dos(m) + ":" + dos(x) + sep + String(Math.round((s % 1) * 1000)).padStart(3, "0");
+  }
+  const texto = (s) => s.trad || s.texto;
+
+  function mostrar(archivo) {
+    if (urlVideo) URL.revokeObjectURL(urlVideo);
+    urlVideo = URL.createObjectURL(archivo);
+    const rep = $("reproductor");
+    rep.innerHTML = ""; rep.src = urlVideo;
+    activarGuardar(false);
+
+    const lista = $("lista");
+    lista.innerHTML = "";
+    segmentos.forEach((s) => {
+      const li = document.createElement("li"), b = document.createElement("button");
+      b.textContent = tiempo(s.ini, ".").slice(3, 8);
+      b.addEventListener("click", () => { rep.currentTime = s.ini; rep.play(); });
+      li.append(b, document.createTextNode(texto(s)));
+      if (s.trad) { const o = document.createElement("small"); o.textContent = s.texto; li.append(o); }
+      lista.appendChild(li);
+    });
+    $("salida").style.display = "block";
+    $("zonaMsg").append(estado, barra);
+  }
+
+  function archivoElegido() {
+    restaurado = null;
+    try { sessionStorage.removeItem("lingua-intentos"); } catch (e) {}
+    const f = video.files[0];
+    $("nombre").textContent = f ? f.name + " · " + (f.size / 1048576).toFixed(1) + " MB" : "";
+    if (!f) $("nombre").innerHTML = "Drop a video here or <u>browse files</u>";
+    ir.disabled = !f;
+  }
+  video.addEventListener("change", archivoElegido);
+  const zona = $("zona");
+  ["dragenter", "dragover"].forEach((e) => zona.addEventListener(e, (ev) => { ev.preventDefault(); zona.classList.add("sobre"); }));
+  ["dragleave", "drop"].forEach((e) => zona.addEventListener(e, (ev) => { ev.preventDefault(); zona.classList.remove("sobre"); }));
+  zona.addEventListener("drop", (ev) => {
+    if (ev.dataTransfer.files.length) { video.files = ev.dataTransfer.files; archivoElegido(); }
+  });
+
+  ir.addEventListener("click", async () => {
+    const archivo = video.files[0] || restaurado;
+    if (!archivo) return;
+    if (!pipeline) { aviso("The engine did not load, so nothing can run. Reload the page with a good internet connection."); return; }
+    const dest = $("destino").value;
+    let orig = $("origen").value;
+    if (orig !== "auto" && !ruta(orig, dest)) { estado.textContent = "There is no translation model for that pair yet."; return; }
+    ir.disabled = true; $("salida").style.display = "none"; $("zonaTop").append(estado, barra);
+    try { sessionStorage.setItem("lingua-intentos", String(intentos() + 1)); } catch (e) {}
+    if (!restaurado) await guardarVideo(archivo);
+    try {
+      paso("reading the audio of the video");
+      estado.textContent = "Extracting audio…";
+      const audio = await audioDelArchivo(archivo);
+      const durVideo = await duracionVideo(archivo), leido = audio.length / 16000;
+      paso("loading the speech model");
+      etiqueta = "Loading the speech model (it downloads only the first time)…";
+      const asr = await pipeline("automatic-speech-recognition", "Xenova/whisper-base", { progress_callback: progreso, dtype: { encoder_model: "q8", decoder_model_merged: "q8" } });
+      barra.hidden = true;
+      paso("transcribing");
+      estado.textContent = "Transcribing… 0%";
+      barra.hidden = false; barra.value = 0;
+      const base0 = { return_timestamps: true, task: "transcribe" };
+      let idioma = orig !== "auto" ? IDIOMAS[orig] : null;
+      const SR = 16000, TROZO = 30 * SR;
+      segmentos = [];
+      let desdeM = 0, vacios = 0, ventanas = 0;
+      while (desdeM < audio.length) {
+        let hastaM = Math.min(audio.length, desdeM + TROZO);
+        if (hastaM < audio.length) hastaM = puntoSilencio(audio, hastaM - 4 * SR, hastaM);
+        if (hastaM - desdeM < SR / 2) break;
+        const base = desdeM / SR, largo = (hastaM - desdeM) / SR;
+        const op = { ...base0 };
+        if (idioma) op.language = idioma;
+        ventanas++;
+        const sal = await asr(audio.subarray(desdeM, hastaM), op);
+        let cs = (sal.chunks || []).filter((c) => c.text && c.text.trim());
+        if (!cs.length && sal.text && sal.text.trim()) cs = [{ text: sal.text, timestamp: [0, largo] }];
+        let avance = hastaM;
+        if (cs.length) {
+          vacios = 0;
+          cs.forEach((c) => {
+            const t = c.text.trim(), a = (c.timestamp[0] ?? 0) + base;
+            if (!segmentos.length || segmentos[segmentos.length - 1].texto !== t)
+              segmentos.push({ ini: a, fin: (c.timestamp[1] ?? (c.timestamp[0] ?? 0) + 3) + base, texto: t });
+          });
+          // Whisper sometimes stops before the end of its window: carry on from where it stopped.
+          const ultimo = cs[cs.length - 1].timestamp[1];
+          if (ultimo != null && ultimo < largo - 3 && hayVoz(audio, desdeM + ultimo * SR, hastaM))
+            avance = Math.max(desdeM + Math.round(ultimo * SR), desdeM + 5 * SR);
+          // With Auto-detect, fix the language after the first result so later windows can't switch language.
+          if (!idioma && orig === "auto") {
+            const d = detectar(segmentos.map((s) => s.texto));
+            if (d && IDIOMAS[d]) idioma = IDIOMAS[d];
+          }
+        } else if (hayVoz(audio, desdeM, hastaM)) {
+          // Nothing came out although there is sound: look again from a later point.
+          vacios++;
+          avance = Math.min(hastaM, desdeM + (vacios === 1 ? 10 : 20) * SR);
+        }
+        desdeM = avance;
+        const pct = Math.min(100, Math.round((desdeM / audio.length) * 100));
+        barra.value = pct; estado.textContent = "Transcribing… " + pct + "%";
+      }
+      await asr.dispose();
+
+      const mmss = (s) => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+      const ultimoFin = segmentos.length ? segmentos[segmentos.length - 1].fin : 0;
+      const cobertura = hayVoz(audio, (ultimoFin + 5) * SR, audio.length)
+        ? " Heads up: the subtitles end at " + mmss(ultimoFin) + " but the video lasts " + mmss(audio.length / SR) + " and there is still sound after that. Try again, or use Better."
+        : "";
+
+      const corto = durVideo && leido < durVideo - 3
+        ? " Only " + mmss(leido) + " of " + mmss(durVideo) + " of audio could be read from this video, so the subtitles can't go further."
+        : "";
+      const detalle = " Details: audio read " + Math.round(leido) + " s of " + (durVideo ? Math.round(durVideo) : "?") +
+        " s, " + ventanas + " windows, subtitles up to " + mmss(ultimoFin) + " (" + segmentos.length + " phrases).";
+      let aviso = cobertura + corto;
+      if (orig === "auto") orig = detectar(segmentos.map((s) => s.texto));
+      const motor = $("motor").value;
+      if (motor === "google") {
+        paso("translating");
+        etiqueta = "Translating with Google...";
+        try {
+          const salidas = await googleTranslate(segmentos.map((s) => s.texto), orig || "auto", dest);
+          segmentos.forEach((s, i) => (s.trad = salidas[i] || s.texto));
+        } catch (e) {
+          aviso += " Google translation failed: " + e.message + ". The original text was kept.";
+          segmentos.forEach((s) => (s.trad = s.texto));
+        }
+      } else if (!orig) {
+        aviso += " Couldn't tell the language, so there is no translation. Pick the video language and try again.";
+      } else {
+        const camino = ruta(orig, dest);
+        if (!camino) aviso += " There is no translation model for that pair yet.";
+        else if (camino.length) {
+        paso("translating");
+        let textos = segmentos.map((s) => s.texto), fallos = 0;
+        for (const [a, b] of camino) {
+          const def = PARES[a + "-" + b], id = typeof def === "string" ? def : def.id, pre = typeof def === "string" ? "" : def.pre;
+          const sep = b === "zh" || b === "ja" ? "" : " ";
+          etiqueta = "Loading translation model " + a + " → " + b + "…";
+          const tr = await pipeline("translation", id, { progress_callback: progreso });
+          const nuevos = [];
+          for (let i = 0; i < textos.length; i++) {
+            const pct = Math.round(((i + 1) / textos.length) * 100);
+            estado.textContent = "Translating… " + pct + "% (" + (i + 1) + " of " + textos.length + ", " + a + " → " + b + ")";
+            barra.hidden = false; barra.value = pct;
+            let salida = "";
+            try {
+              for (const f of frases(textos[i])) {
+                const r = await tr(pre + f, { max_new_tokens: 256, no_repeat_ngram_size: 4 });
+                salida += (salida ? sep : "") + r[0].translation_text;
+              }
+            } catch (e) { fallos++; salida = textos[i]; }
+            nuevos.push(salida);
+          }
+          await tr.dispose();
+          textos = nuevos;
+        }
+          segmentos.forEach((s, i) => (s.trad = textos[i]));
+          if (fallos) aviso += " " + fallos + " phrase(s) couldn't be translated and stay in the original language.";
+        }
+      }
+      barra.hidden = true;
+      document.getElementById("aviso").hidden = true;
+      mostrar(archivo);
+      estado.textContent = "Done. Press play to see the subtitles." + aviso + detalle;
+    } catch (e) {
+      barra.hidden = true;
+      estado.textContent = "Something went wrong: " + e.message;
+    } finally {
+      paso(null);
+      try { sessionStorage.removeItem("lingua-intentos"); } catch (e) {}
+      ir.disabled = !(video.files[0] || restaurado);
+    }
+  });
+
+  $("srt").addEventListener("click", () => {
+    const srt = segmentos.map((s, i) =>
+      (i + 1) + "\n" + tiempo(s.ini, ",") + " --> " + tiempo(s.fin, ",") + "\n" + texto(s) + "\n").join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([srt], { type: "text/plain" }));
+    a.download = "subtitles.srt";
+    a.click();
+  });
+
+  $("copiar").addEventListener("click", async () => {
+    const b = $("copiar");
+    try { await navigator.clipboard.writeText(segmentos.map(texto).join("\n")); b.textContent = "Copied"; }
+    catch { b.textContent = "Couldn't copy"; }
+    setTimeout(() => (b.textContent = "Copy text"), 1500);
+  });
+  // ---- Subtitle style, live overlay and video export ----
+  const rep = $("reproductor"), capa = $("sub");
+  const estilo = () => ({ tam: +$("tam").value / 100, pos: 1 - +$("pos").value / 100,
+                          color: $("color").value, fondo: $("fondo").checked,
+                          fcolor: $("bgcolor").value, opa: +$("opa").value / 100 });
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")"; };
+  const textoEn = (t) => { const s = segmentos.find((x) => t >= x.ini && t < x.fin); return s ? texto(s) : ""; };
+
+  function actualizarSub() {
+    if (!rep.clientHeight) return;
+    const e = estilo(), t = textoEn(rep.currentTime);
+    capa.hidden = !t;
+    capa.textContent = t;
+    capa.style.fontSize = e.tam * rep.clientHeight + "px";
+    capa.style.top = e.pos * 100 + "%";
+    capa.style.color = e.color;
+    capa.style.background = e.fondo ? rgba(e.fcolor, e.opa) : "transparent";
+    capa.style.textShadow = e.fondo ? "none" : "0 0 4px #000, 0 0 4px #000, 0 0 2px #000";
+  }
+  (function bucle() { actualizarSub(); requestAnimationFrame(bucle); })();
+
+  function envolver(c, txt, maxAncho) {
+    const lineas = []; let l = "";
+    for (const p of txt.split(/\s+/)) {
+      const prueba = l ? l + " " + p : p;
+      if (c.measureText(prueba).width > maxAncho && l) { lineas.push(l); l = p; } else l = prueba;
+    }
+    if (l) lineas.push(l);
+    return lineas;
+  }
+
+  function dibujarSub(c, W, H, txt, e) {
+    if (!txt) return;
+    const px = e.tam * H;
+    c.font = "700 " + px + "px -apple-system, Helvetica, Arial, sans-serif";
+    c.textAlign = "center"; c.textBaseline = "middle";
+    const lineas = envolver(c, txt, W * 0.92 - px * 0.8);
+    const alto = px * 1.2, total = alto * lineas.length, cy = e.pos * H;
+    if (e.fondo) {
+      const ancho = Math.max(...lineas.map((l) => c.measureText(l).width)) + px * 0.8;
+      c.fillStyle = rgba(e.fcolor, e.opa);
+      c.fillRect(W / 2 - ancho / 2, cy - total / 2 - px * 0.15, ancho, total + px * 0.3);
+    }
+    lineas.forEach((l, i) => {
+      const y = cy - total / 2 + alto * (i + 0.5);
+      if (!e.fondo) { c.lineWidth = px * 0.18; c.lineJoin = "round"; c.strokeStyle = "#000"; c.strokeText(l, W / 2, y); }
+      c.fillStyle = e.color; c.fillText(l, W / 2, y);
+    });
+  }
+
+  let listo = null;
+
+  $("grabar").addEventListener("click", () => {
+    if (!window.MediaRecorder || !segmentos.length) {
+      estado.textContent = "This browser can't record video. Update Safari and try again."; return;
+    }
+    const btn = $("grabar"); btn.disabled = true; activarGuardar(false); listo = null; paso("recording the video with subtitles");
+    rep.pause();
+    const e = estilo();
+    const esc = Math.min(1, 1280 / Math.max(rep.videoWidth, rep.videoHeight));
+    const W = Math.round(rep.videoWidth * esc), H = Math.round(rep.videoHeight * esc);
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const c = cv.getContext("2d");
+
+    // Hidden copy of the video: its sound goes to the recorder only, so nothing plays out loud.
+    const v = document.createElement("video");
+    v.src = urlVideo; v.playsInline = true; v.setAttribute("playsinline", "");
+    v.style.cssText = "position:fixed;left:0;top:0;width:320px;opacity:0;pointer-events:none;z-index:-1";
+    document.body.appendChild(v);
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ac = new AC(); ac.resume();
+    const dest = ac.createMediaStreamDestination();
+    ac.createMediaElementSource(v).connect(dest);
+
+    const flujo = cv.captureStream(30);
+    dest.stream.getAudioTracks().forEach((t) => flujo.addTrack(t));
+    const tipo = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"]
+      .find((t) => MediaRecorder.isTypeSupported(t)) || "";
+    const grab = new MediaRecorder(flujo, tipo ? { mimeType: tipo, videoBitsPerSecond: 4000000 } : {});
+    const trozos = [];
+    grab.ondataavailable = (ev) => { if (ev.data.size) trozos.push(ev.data); };
+
+    const terminar = (error) => {
+      v.remove(); ac.close(); barra.hidden = true; btn.disabled = false; paso(null);
+      if (error) { estado.textContent = "Something went wrong: " + error; return; }
+      const ext = (grab.mimeType || tipo).includes("mp4") ? "mp4" : "webm";
+      listo = new File(trozos, "video-with-subtitles." + ext, { type: "video/" + ext });
+      activarGuardar(true);
+      $("final").src = URL.createObjectURL(listo); $("final").hidden = false;
+      hecho("Your video is ready. Watch it above, then choose below where to save it.");
+    };
+    grab.onstop = () => terminar(null);
+    v.onerror = () => { if (grab.state !== "inactive") grab.stop(); terminar("couldn't read the video"); };
+    v.onended = () => { if (grab.state !== "inactive") grab.stop(); };
+
+    barra.hidden = false; barra.value = 0;
+    hecho("Recording the video with subtitles in real time. Keep this screen open.");
+    grab.start(1000);
+    v.play().catch((err) => { if (grab.state !== "inactive") grab.stop(); terminar(err.message); });
+
+    const pintar = () => {
+      c.drawImage(v, 0, 0, W, H);
+      dibujarSub(c, W, H, textoEn(v.currentTime), e);
+      barra.value = v.duration ? Math.round((v.currentTime / v.duration) * 100) : 0;
+      if (!v.ended && grab.state !== "inactive") requestAnimationFrame(pintar);
+    };
+    pintar();
+  });
+
+  // True if there are at least 1.5 s of sound between two points (in samples).
+  function hayVoz(a, desde, hasta) {
+    const V = 8000; let n = 0;
+    for (let i = Math.max(0, Math.floor(desde)); i + V <= hasta; i += V) {
+      let e = 0;
+      for (let j = i; j < i + V; j += 4) e += a[j] * a[j];
+      if (Math.sqrt(e / (V / 4)) > 0.006) n++;
+    }
+    return n >= 3;
+  }
+
+  // Cut the audio at the quietest moment of the last 4 seconds, so words are not split in half.
+  function puntoSilencio(a, desde, hasta) {
+    const V = 3200;
+    let mejor = hasta, minimo = Infinity;
+    for (let i = desde; i + V <= hasta; i += 1600) {
+      let e = 0;
+      for (let j = i; j < i + V; j += 8) e += a[j] * a[j];
+      if (e < minimo) { minimo = e; mejor = i + V / 2; }
+    }
+    return Math.floor(mejor);
+  }
+
+  function activarGuardar(on) {
+    $("aGuardar").disabled = !on;
+    if (!on) { $("final").hidden = true; $("resumen").hidden = true; }
+  }
+
+  function hecho(t) {
+    estado.textContent = t;
+    estado.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  function resumir(destino) {
+    const r = $("resumen");
+    r.textContent = "Last save: " + listo.name + " (" + (listo.size / 1048576).toFixed(1) + " MB) → " + destino;
+    r.hidden = false;
+  }
+
+  // Both buttons open the iPhone save menu (the only way a web page can reach Photos or a Files folder).
+  async function guardar(antes, despues, destino) {
+    if (!listo) return;
+    const botones = [$("aGuardar")];
+    botones.forEach((b) => (b.disabled = true));
+    barra.hidden = false; barra.removeAttribute("value");   // moving bar while the menu opens
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [listo] })) {
+        hecho(antes);
+        try {
+          await navigator.share({ files: [listo] });
+          hecho(despues); resumir(destino);
+          return;
+        } catch (err) {
+          if (err.name === "AbortError") { hecho("Cancelled, nothing was saved. Tap the button to try again."); return; }
+        }
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(listo); a.download = listo.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      hecho("The save menu isn't available here, so the video was downloaded as " + listo.name +
+            ". Open the Files app and tap Recents, or look in Browse, Downloads.");
+      resumir("Files app, Browse > Downloads (also under Recents)");
+    } finally {
+      barra.hidden = true; barra.value = 0;
+      botones.forEach((b) => (b.disabled = false));
+    }
+  }
+  $("aGuardar").addEventListener("click", () => guardar(
+    "Opening the iPhone menu… tap Save Video (Photos) or Save to Files (pick a folder).",
+    "Menu closed. If you tapped Save Video, look in Photos (Recents). If you tapped Save to Files, look in the folder you picked, or in Files, Recents.",
+    "Photos (Recents) or the Files folder you picked"));
+
+  function enlazar(r, n) {
+    r.addEventListener("input", () => { n.value = r.value; });
+    n.addEventListener("input", () => { if (n.value !== "" && !isNaN(+n.value)) r.value = n.value; });
+    n.addEventListener("change", () => { n.value = r.value; });
+  }
+  enlazar($("tam"), $("tamN"));
+  enlazar($("pos"), $("posN"));
+  enlazar($("opa"), $("opaN"));
+
+  // − and + buttons around each number box
+  document.querySelectorAll(".par").forEach((p) => {
+    const r = p.querySelector("input[type=range]"), n = p.querySelector("input[type=number]");
+    const paso = +r.step || 1;
+    const hacer = (txt, nombre, d) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "mm"; b.textContent = txt; b.setAttribute("aria-label", nombre);
+      b.addEventListener("click", () => { r.value = Math.round((+r.value + d * paso) * 100) / 100; n.value = r.value; });
+      return b;
+    };
+    n.before(hacer("−", "Decrease", -1));
+    n.after(hacer("+", "Increase", 1));
+  });
+
+  // Color groups: quick colors, picker and color code
+  document.querySelectorAll(".sws").forEach((g) => {
+    const pick = $(g.dataset.pick), hex = $(g.dataset.hex);
+    g.querySelectorAll(".sw").forEach((b) => b.addEventListener("click", () => { pick.value = b.dataset.c; hex.value = b.dataset.c; }));
+    pick.addEventListener("input", () => { hex.value = pick.value; });
+    hex.addEventListener("input", () => {
+      let v = hex.value.trim();
+      if (v && v[0] !== "#") v = "#" + v;
+      if (/^#[0-9a-f]{6}$/i.test(v)) pick.value = v.toLowerCase();
+    });
+    hex.addEventListener("change", () => { hex.value = pick.value; });
+  });
+
+  // After a crash: put the saved video back and, if allowed, start again by itself.
+  if (reintentar) {
+    (async () => {
+      const f = await leerVideo();
+      if (!f) { aviso("The iPhone closed this page and the video could not be kept. Please pick the video again."); return; }
+      restaurado = f;
+      try { const dt = new DataTransfer(); dt.items.add(new File([f], f.name, { type: f.type })); video.files = dt.files; } catch (e) {}
+      $("nombre").textContent = f.name + " · " + (f.size / 1048576).toFixed(1) + " MB";
+      ir.disabled = false;
+      if (reintentar.auto && pipeline && $("motor").value !== "google") setTimeout(() => ir.click(), 800);
+    })();
+  }
+</script>
+</body>
+</html>
+

@@ -1,47 +1,34 @@
-# Lingua IOS — versión iPhone
+# Lingua IOS V2 — RS App
 
-Página web que transcribe un video con Whisper, lo traduce y le pone subtítulos, todo dentro del navegador del iPhone (Safari). No usa servidor ni laptop: el video no sale del teléfono.
+PWA para iPhone (Safari) que transcribe un video con Whisper, traduce los subtítulos y graba un video nuevo con los subtítulos puestos. Todo en el teléfono: no usa servidor ni laptop.
 
-La versión de escritorio (Windows, con Whisper y Argos) vive en **otro proyecto**, aparte de este.
+V2 agrega **Google Translate** como motor predeterminado (Opus-MT sigue disponible como opción) y quita el bucle de reintento que bloqueaba la traducción en Safari.
 
-## Qué hace
-- Transcribe con Whisper (modelo `whisper-base`) usando Transformers.js.
-- Traduce con modelos Opus-MT, frase por frase. Entre dos idiomas que no son inglés pasa por inglés.
+## Idiomas y motores
+
 - 13 idiomas: inglés, español, francés, alemán, italiano, portugués, ruso, chino, japonés, árabe, hindi, neerlandés y sueco.
-- Subtítulos con tamaño, altura, color de texto, color y opacidad del fondo.
-- Graba un video nuevo con los subtítulos puestos (en tiempo real) y lo guarda en Fotos o en Archivos desde el menú del iPhone.
-- Baja los subtítulos en `.srt`.
-- Si el iPhone cierra la página por falta de memoria, la página guarda el video en el teléfono (IndexedDB) y reintenta sola, hasta 4 veces.
+- **Google Translate** (predeterminado): necesita internet, no descarga modelos de traducción; solo se envía el texto de los subtítulos.
+- **Opus-MT** (opcional): traduce en el dispositivo, descarga modelos la primera vez.
+- Transcripción: Whisper `whisper-base` en el navegador (descarga el modelo la primera vez).
 
-## Estructura
-- `index.html`: toda la app (HTML, CSS y JavaScript en un solo archivo).
-- `manifest.webmanifest`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`: nombre e ícono (L azul) para la pantalla de inicio.
-- `alternativo/apple-touch-icon.png`: ícono alterno (cuadro azul con L oscura). Para usarlo, copiarlo a la raíz reemplazando el otro.
-- `README.md`: este archivo.
+## Subtítulos
 
-## Publicar (GitHub Pages)
-1. Sube `index.html` a la raíz del repositorio.
-2. En el repositorio: Settings, Pages, "Deploy from a branch", rama `main`, carpeta `/ (root)`.
-3. Abre `https://<usuario>.github.io/<repositorio>/` en Safari.
-
-Para ver un cambio nuevo sin que Safari use lo guardado, agrega `?v=NUMERO` al final de la liga. La versión aparece abajo a la izquierda de la página.
-
-## Límites conocidos
-- Mejor con videos cortos (hasta unos 8 minutos). El iPhone tiene poca memoria y Safari puede cerrar la página.
-- La primera vez descarga los modelos (decenas de MB) y tarda más.
-- iOS no deja que una página guarde directo en Fotos: se usa el menú de guardar del iPhone.
-- Pendiente: que los subtítulos no se corten a la mitad en videos de más de un minuto (se revisa con el renglón "Details" que aparece al terminar).
-
-## Versión
-v19
-
+Tamaño, altura, color de texto, color y opacidad del fondo. Se puede descargar el `.srt` y grabar el video con subtítulos; en iPhone se guarda desde *Compartir → Guardar en Archivos / Fotos*.
 
 ## Versión y acceso
 
-Versión actual: **V1** — https://rserrano285-svg.github.io/Lingua-IOS/V1/
+Versión actual: **V2** — https://rserrano285-svg.github.io/Lingua-IOS/V2/
 
-Los enlaces antiguos (`/V18/`, `/V19/`) redirigen a V1. Convención: cada versión se publica en su propia carpeta (`V1`, `V2`, ...). La URL raíz redirige a la última versión, así que las actualizaciones futuras no rompen el enlace. Instálala en el iPhone desde esa URL con *Compartir → Agregar a pantalla de inicio*.
+La URL raíz redirige a V2. Convención **RS App**: cada versión vive en su carpeta (`V1`, `V2`, ...). Las rutas antiguas `/V18/` y `/V19/` redirigen a V1.
+
+Para instalarla: abre la URL en Safari → *Compartir → Agregar a pantalla de inicio*.
+
+## Límites conocidos
+
+- Videos cortos (hasta ~8 min); Safari en iPhone tiene poca memoria.
+- La primera vez descarga modelos de Whisper (decenas de MB).
+- iOS no permite guardar silenciosamente: se usa el menú Compartir.
 
 ## Apoyo
 
-Lingua IOS es gratuita y de código abierto. Si te sirve, puedes apoyar el desarrollo con una donación voluntaria: [PayPal (rene285serrano)](https://paypal.me/rene285serrano). Cualquier ayuda cuenta.
+Gratuita y de código abierto. [PayPal (rene285serrano)](https://paypal.me/rene285serrano).
