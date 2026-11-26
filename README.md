@@ -36,6 +36,12 @@ Para ver un cambio nuevo sin que Safari use lo guardado, agrega `?v=NUMERO` al f
 v19
 
 
+## Versión y acceso
+
+Versión actual: **V1** — https://rserrano285-svg.github.io/Lingua-IOS/V1/
+
+Convención: cada versión se publica en su propia carpeta (`V1`, `V2`, ...). La URL raíz redirige a la última versión, así que las actualizaciones futuras no rompen el enlace. Instálala en el iPhone desde esa URL con *Compartir → Agregar a pantalla de inicio*.
+
 ## Apoyo
 
 Lingua IOS es gratuita y de código abierto. Si te sirve, puedes apoyar el desarrollo con una donación voluntaria: [PayPal (rene285serrano)](https://paypal.me/rene285serrano). Cualquier ayuda cuenta.
