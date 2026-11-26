@@ -40,7 +40,7 @@ v19
 
 Versión actual: **V1** — https://rserrano285-svg.github.io/Lingua-IOS/V1/
 
-Convención: cada versión se publica en su propia carpeta (`V1`, `V2`, ...). La URL raíz redirige a la última versión, así que las actualizaciones futuras no rompen el enlace. Instálala en el iPhone desde esa URL con *Compartir → Agregar a pantalla de inicio*.
+Los enlaces antiguos (`/V18/`, `/V19/`) redirigen a V1. Convención: cada versión se publica en su propia carpeta (`V1`, `V2`, ...). La URL raíz redirige a la última versión, así que las actualizaciones futuras no rompen el enlace. Instálala en el iPhone desde esa URL con *Compartir → Agregar a pantalla de inicio*.
 
 ## Apoyo
 
