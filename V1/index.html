@@ -129,8 +129,11 @@
     <div class="cab"><span class="n">01</span><h2>Choose your languages</h2><span class="der badge">Local processing</span></div>
 
     <label class="t" for="motor">Translation engine</label>
-    <select id="motor"><option>Opus-MT · on this device</option></select>
-    <p class="nota">Opus-MT runs inside your browser and downloads small language models the first time.</p>
+    <select id="motor">
+      <option value="google" selected>Google Translate · on the internet</option>
+      <option value="opus">Opus-MT · on this device</option>
+    </select>
+    <p class="nota">Google Translate needs internet but does not download translation models. Opus-MT works offline after the first download.</p>
 
     <div class="fila">
       <div><label class="t" for="origen">Video language</label>
@@ -218,7 +221,7 @@
 
 <footer>
   <span>RS App · Lingua · Open source · Runs on your device · V1</span>
-  <span>Speech recognition: Whisper · Translation: Opus-MT</span>
+  <span id="engine-footer">Speech recognition: Whisper · Translation: Google</span>
   <a href="https://paypal.me/rene285serrano" target="_blank" rel="noopener noreferrer">Donar / Apoyar El Proyecto ♥</a>
 </footer>
 
@@ -275,6 +278,31 @@
 
   const $ = (id) => document.getElementById(id);
   const estado = $("estado"), barra = $("barra"), ir = $("ir"), video = $("video");
+  async function googleTranslate(textos, from, to) {
+    const salidas = [];
+    for (let i = 0; i < textos.length; i += 8) {
+      const lote = textos.slice(i, i + 8);
+      const promesas = lote.map(async (texto) => {
+        const url = "https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=" + encodeURIComponent(from || "auto") +
+          "&tl=" + encodeURIComponent(to) + "&dt=t&q=" + encodeURIComponent(texto);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Google Translate " + res.status);
+        const data = await res.json();
+        let salida = "";
+        if (Array.isArray(data[0])) {
+          salida = typeof data[0][0] === "string" ? data[0][0]
+            : (Array.isArray(data[0][0]) ? data[0][0].map((x) => x[0] || "").join("") : "");
+        } else if (typeof data[0] === "string") salida = data[0];
+        return salida || texto;
+      });
+      salidas.push(...await Promise.all(promesas));
+      const pct = Math.round((i + lote.length) / textos.length * 100);
+      estado.textContent = "Translating with Google... " + pct + "%";
+      barra.hidden = false; barra.value = pct;
+    }
+    return salidas;
+  }
+
   const IDIOMAS = { en: "english", es: "spanish", fr: "french", de: "german", it: "italian", pt: "portuguese",
                     ru: "russian", zh: "chinese", ja: "japanese", ar: "arabic", hi: "hindi", nl: "dutch", sv: "swedish" };
   const M = (p) => "Xenova/opus-mt-" + p;
@@ -491,10 +519,23 @@
         " s, " + ventanas + " windows, subtitles up to " + mmss(ultimoFin) + " (" + segmentos.length + " phrases).";
       let aviso = cobertura + corto;
       if (orig === "auto") orig = detectar(segmentos.map((s) => s.texto));
-      const camino = orig ? ruta(orig, dest) : null;
-      if (!orig) aviso += " Couldn't tell the language, so there is no translation. Pick the video language and try again.";
-      else if (!camino) aviso += " There is no translation model for that pair yet.";
-      else if (camino.length) {
+      const motor = $("motor").value;
+      if (motor === "google") {
+        paso("translating");
+        etiqueta = "Translating with Google...";
+        try {
+          const salidas = await googleTranslate(segmentos.map((s) => s.texto), orig || "auto", dest);
+          segmentos.forEach((s, i) => (s.trad = salidas[i] || s.texto));
+        } catch (e) {
+          aviso += " Google translation failed: " + e.message + ". The original text was kept.";
+          segmentos.forEach((s) => (s.trad = s.texto));
+        }
+      } else if (!orig) {
+        aviso += " Couldn't tell the language, so there is no translation. Pick the video language and try again.";
+      } else {
+        const camino = ruta(orig, dest);
+        if (!camino) aviso += " There is no translation model for that pair yet.";
+        else if (camino.length) {
         paso("translating");
         let textos = segmentos.map((s) => s.texto), fallos = 0;
         for (const [a, b] of camino) {
@@ -519,8 +560,9 @@
           await tr.dispose();
           textos = nuevos;
         }
-        segmentos.forEach((s, i) => (s.trad = textos[i]));
-        if (fallos) aviso += " " + fallos + " phrase(s) couldn't be translated and stay in the original language.";
+          segmentos.forEach((s, i) => (s.trad = textos[i]));
+          if (fallos) aviso += " " + fallos + " phrase(s) couldn't be translated and stay in the original language.";
+        }
       }
       barra.hidden = true;
       document.getElementById("aviso").hidden = true;
@@ -777,7 +819,7 @@
       try { const dt = new DataTransfer(); dt.items.add(new File([f], f.name, { type: f.type })); video.files = dt.files; } catch (e) {}
       $("nombre").textContent = f.name + " · " + (f.size / 1048576).toFixed(1) + " MB";
       ir.disabled = false;
-      if (reintentar.auto && pipeline) setTimeout(() => ir.click(), 800);
+      if (reintentar.auto && pipeline && $("motor").value !== "google") setTimeout(() => ir.click(), 800);
     })();
   }
 </script>
