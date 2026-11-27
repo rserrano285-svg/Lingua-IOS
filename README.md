@@ -1,4 +1,4 @@
-# Lingua IOS V2 — RS App
+# Lingua IOS — RS App
 
 PWA para iPhone (Safari) que transcribe un video con Whisper, traduce los subtítulos y graba un video nuevo con los subtítulos puestos. Todo en el teléfono: no usa servidor ni laptop.
 
@@ -17,9 +17,9 @@ Tamaño, altura, color de texto, color y opacidad del fondo. Se puede descargar 
 
 ## Versión y acceso
 
-Versión actual: **V3** — https://rserrano285-svg.github.io/Lingua-IOS/V3/
+Versión actual: ver [CHANGELOG.md](CHANGELOG.md) y las notas de release del repositorio — https://rserrano285-svg.github.io/Lingua-IOS/V3/
 
-La URL raíz redirige a V2. Convención RS App: cada versión vive en su carpeta (`V1`, `V2`, `V3`, ...); la raíz redirige a la última. Las rutas `/V2/` y antiguas redirigen a V3.
+La URL raíz redirige a la última versión. Convención RS App: cada versión vive en su carpeta (`V1`, `V2`, `V3`, ...); las rutas antiguas redirigen a la última.
 
 Para instalarla: abre la URL en Safari → *Compartir → Agregar a pantalla de inicio*.
 
