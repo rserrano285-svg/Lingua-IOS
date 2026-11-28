@@ -276,6 +276,17 @@
   }
 
   const $ = (id) => document.getElementById(id);
+
+  // Guardar con número incremental: subtitles1.srt, video-with-subtitles1.mp4...
+  function nextSaveName(base, ext) {
+    let n = 1;
+    try {
+      const c = JSON.parse(localStorage.getItem('lingua:saveCounter') || '{}');
+      n = (c[base] || 0) + 1; c[base] = n;
+      localStorage.setItem('lingua:saveCounter', JSON.stringify(c));
+    } catch (e) { n = 1; }
+    return base + n + '.' + ext;
+  }
   const estado = $("estado"), barra = $("barra"), ir = $("ir"), video = $("video");
   async function googleTranslate(textos, from, to) {
     const salidas = [];
@@ -582,7 +593,7 @@
       (i + 1) + "\n" + tiempo(s.ini, ",") + " --> " + tiempo(s.fin, ",") + "\n" + texto(s) + "\n").join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([srt], { type: "text/plain" }));
-    a.download = "subtitles.srt";
+    a.download = nextSaveName("subtitles", "srt");
     a.click();
   });
 
@@ -678,7 +689,7 @@
       v.remove(); ac.close(); barra.hidden = true; btn.disabled = false; paso(null);
       if (error) { estado.textContent = "Something went wrong: " + error; return; }
       const ext = (grab.mimeType || tipo).includes("mp4") ? "mp4" : "webm";
-      listo = new File(trozos, "video-with-subtitles." + ext, { type: "video/" + ext });
+      listo = new File(trozos, nextSaveName("video-with-subtitles", ext), { type: "video/" + ext });
       activarGuardar(true);
       $("final").src = URL.createObjectURL(listo); $("final").hidden = false;
       hecho("Your video is ready. Watch it above, then choose below where to save it.");

@@ -2,6 +2,10 @@
 
 Convención RS App: cada versión vive en su carpeta (`V1`, `V2`, …) y se registra aquí y en las notas de release de GitHub.
 
+## Mejora — Nombre incremental al guardar (2026-11-28)
+
+- Al descargar subtítulos o el video se sugiere el nombre con número: `subtitles1.srt`, `video-with-subtitles1.mp4`, etc.
+
 ## V3
 
 - Versión publicada en https://rserrano285-svg.github.io/Lingua-IOS/V3/
